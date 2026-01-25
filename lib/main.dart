@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+// NEU: Import für Geräte-Erkennung
+import 'package:device_info_plus/device_info_plus.dart'; 
+
 import 'package:anymex/controllers/cacher/cache_controller.dart';
 import 'package:anymex/controllers/discord/discord_rpc.dart';
 import 'package:anymex/controllers/offline/offline_storage_controller.dart';
@@ -57,6 +60,8 @@ import 'package:window_manager/window_manager.dart';
 
 WebViewEnvironment? webViewEnvironment;
 late Isar isar;
+// NEU: Globale Variable für TV-Status
+bool isAndroidTV = false;
 
 class MyHttpoverrides extends HttpOverrides {
   @override
@@ -83,10 +88,12 @@ void main(List<String> args) async {
     await Logger.init();
     await dotenv.load(fileName: ".env");
 
-    // TODO: For all the contributors just make a supabase account and then change this
-    // await Supabase.initialize(
-    //     url: dotenv.env['SUPABASE_URL']!,
-    //     anonKey: dotenv.env['SUPABASE_ANON_KEY']!);
+    // NEU: TV-Erkennung
+    if (Platform.isAndroid) {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      // Überprüft, ob das System "leanback" (TV UI) hat
+      isAndroidTV = androidInfo.systemFeatures.contains('android.software.leanback');
+    }
 
     if (Platform.isWindows) {
       ['dar', 'anymex', 'sugoireads', 'mangayomi']
@@ -194,67 +201,75 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
 
-    return KeyboardListener(
-      focusNode: FocusNode(),
-      onKeyEvent: (KeyEvent event) async {
-        if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.escape) {
-            Navigator.pop(Get.context!);
-          } else if (event.logicalKey == LogicalKeyboardKey.f11) {
-            bool isFullScreen = await windowManager.isFullScreen();
-            AnymexTitleBar.setFullScreen(!isFullScreen);
-          } else if (event.logicalKey == LogicalKeyboardKey.enter) {
-            final isAltPressed = HardwareKeyboard.instance.logicalKeysPressed
-                    .contains(LogicalKeyboardKey.altLeft) ||
-                HardwareKeyboard.instance.logicalKeysPressed
-                    .contains(LogicalKeyboardKey.altRight);
-            if (isAltPressed) {
+    return Shortcuts(
+      shortcuts: <LogicalKeySet, Intent>{
+        LogicalKeySet(LogicalKeyboardKey.select): const ActivateIntent(),
+      },
+      child: KeyboardListener(
+        focusNode: FocusNode(),
+        onKeyEvent: (KeyEvent event) async {
+          if (event is KeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.escape) {
+              if (Get.currentRoute == '/' || Get.currentRoute == '') {
+              } else {
+                 Navigator.pop(Get.context!);
+              }
+            } else if (event.logicalKey == LogicalKeyboardKey.f11) {
               bool isFullScreen = await windowManager.isFullScreen();
               AnymexTitleBar.setFullScreen(!isFullScreen);
+            } else if (event.logicalKey == LogicalKeyboardKey.enter) {
+              final isAltPressed = HardwareKeyboard.instance.logicalKeysPressed
+                      .contains(LogicalKeyboardKey.altLeft) ||
+                  HardwareKeyboard.instance.logicalKeysPressed
+                      .contains(LogicalKeyboardKey.altRight);
+              if (isAltPressed) {
+                bool isFullScreen = await windowManager.isFullScreen();
+                AnymexTitleBar.setFullScreen(!isFullScreen);
+              }
             }
           }
-        }
-      },
-      child: GetMaterialApp(
-        scrollBehavior: MyCustomScrollBehavior(),
-        debugShowCheckedModeBanner: false,
-        title: "AnymeX",
-        theme: theme.lightTheme,
-        darkTheme: theme.darkTheme,
-        themeMode: theme.isSystemMode
-            ? ThemeMode.system
-            : theme.isLightMode
-                ? ThemeMode.light
-                : ThemeMode.dark,
-        home: const FilterScreen(),
-        builder: (context, child) {
-          if (PlatformDispatcher.instance.views.length > 1) {
-            return child!;
-          }
-          final isDesktop = Platform.isWindows;
+        },
+        child: GetMaterialApp(
+          scrollBehavior: MyCustomScrollBehavior(),
+          debugShowCheckedModeBanner: false,
+          title: "AnymeX",
+          theme: theme.lightTheme,
+          darkTheme: theme.darkTheme,
+          themeMode: theme.isSystemMode
+              ? ThemeMode.system
+              : theme.isLightMode
+                  ? ThemeMode.light
+                  : ThemeMode.dark,
+          home: const FilterScreen(),
+          builder: (context, child) {
+            if (PlatformDispatcher.instance.views.length > 1) {
+              return child!;
+            }
+            final isDesktop = Platform.isWindows;
 
-          if (isDesktop) {
-            return Stack(
-              children: [
-                child!,
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    color: Colors.transparent,
-                    child: AnymexTitleBar.titleBar(),
+            if (isDesktop) {
+              return Stack(
+                children: [
+                  child!,
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      color: Colors.transparent,
+                      child: AnymexTitleBar.titleBar(),
+                    ),
                   ),
-                ),
-              ],
-            );
-          }
-          return child!;
-        },
-        enableLog: true,
-        logWriterCallback: (text, {isError = false}) async {
-          Logger.d(text);
-        },
+                ],
+              );
+            }
+            return child!;
+          },
+          enableLog: true,
+          logWriterCallback: (text, {isError = false}) async {
+            Logger.d(text);
+          },
+        ),
       ),
     );
   }
@@ -314,7 +329,9 @@ class _FilterScreenState extends State<FilterScreen> {
       child: PlatformBuilder(
         strictMode: false,
         desktopBuilder: _buildDesktopLayout(context, authService, isSimkl),
-        androidBuilder: _buildAndroidLayout(isSimkl),
+        androidBuilder: isAndroidTV 
+            ? _buildDesktopLayout(context, authService, isSimkl) 
+            : _buildAndroidLayout(isSimkl),
       ),
     );
   }
