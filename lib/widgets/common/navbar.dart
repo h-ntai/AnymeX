@@ -1,14 +1,12 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:anymex/controllers/settings/methods.dart';
 import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/widgets/animation/slide_scale.dart';
 import 'package:anymex/widgets/common/glow.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
-import 'package:anymex/widgets/helper/tv_wrapper.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui';
-
 import 'package:get/get.dart';
 
 class ResponsiveNavBar extends StatefulWidget {
@@ -212,6 +210,8 @@ class _NavBarItemState extends State<NavBarItem>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _indicatorAnimation;
+  bool _isFocused = false;
+
   @override
   void initState() {
     super.initState();
@@ -254,6 +254,34 @@ class _NavBarItemState extends State<NavBarItem>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // Gemeinsamer Button-Body mit Fokus-Unterstützung für TV
+    Widget buildBody() {
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+            color: widget.isSelected
+                ? theme.colorScheme.primary.withOpacity(0.1)
+                : (_isFocused ? theme.colorScheme.onSurface.withOpacity(0.1) : Colors.transparent),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _isFocused ? theme.colorScheme.primary : Colors.transparent,
+              width: 2,
+            ),
+            boxShadow: widget.isSelected ? [lightGlowingShadow(context)] : []),
+        child: widget.altIcon ??
+            Icon(
+              widget.isSelected
+                  ? widget.selectedIcon
+                  : widget.unselectedIcon,
+              color: widget.isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.inverseSurface,
+              size: widget.iconSize,
+            ),
+      );
+    }
+
     return Container(
       padding:
           widget.isVertical ? const EdgeInsets.symmetric(vertical: 5) : null,
@@ -291,33 +319,12 @@ class _NavBarItemState extends State<NavBarItem>
                     );
                   },
                 ),
-                AnymexOnTap(
-                  margin: 0,
-                  scale: 1,
+                // Benutze InkWell für TV Fokus-Support
+                InkWell(
                   onTap: widget.onTap,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 500),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                        color: widget.isSelected
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.1)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [lightGlowingShadow(context)]),
-                    child: widget.altIcon ??
-                        Icon(
-                          widget.isSelected
-                              ? widget.selectedIcon
-                              : widget.unselectedIcon,
-                          color: widget.isSelected
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.inverseSurface,
-                          size: widget.iconSize,
-                        ),
-                  ),
+                  onFocusChange: (value) => setState(() => _isFocused = value),
+                  borderRadius: BorderRadius.circular(12),
+                  child: buildBody(),
                 ),
               ],
             )
@@ -326,31 +333,9 @@ class _NavBarItemState extends State<NavBarItem>
               children: [
                 InkWell(
                   onTap: widget.onTap,
+                  onFocusChange: (value) => setState(() => _isFocused = value),
                   borderRadius: BorderRadius.circular(12),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                        color: (widget.isSelected
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.1)
-                            : Colors.transparent),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow:
-                            widget.isSelected ? [glowingShadow(context)] : []),
-                    child: widget.altIcon ??
-                        Icon(
-                          widget.isSelected
-                              ? widget.selectedIcon
-                              : widget.unselectedIcon,
-                          color: widget.isSelected
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.inverseSurface,
-                          size: widget.iconSize,
-                        ),
-                  ),
+                  child: buildBody(),
                 ),
                 AnimatedBuilder(
                   animation: _indicatorAnimation,
