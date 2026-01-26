@@ -85,6 +85,8 @@ void main(List<String> args) async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
+    MediaKit.ensureInitialized();
+
     await Logger.init();
     await dotenv.load(fileName: ".env");
 
@@ -104,7 +106,6 @@ void main(List<String> args) async {
     await initializeHive();
     _initializeGetxController();
     initializeDateFormatting();
-    MediaKit.ensureInitialized();
     if (!Platform.isAndroid && !Platform.isIOS) {
       await windowManager.ensureInitialized();
       await AnymexTitleBar.initialize();
