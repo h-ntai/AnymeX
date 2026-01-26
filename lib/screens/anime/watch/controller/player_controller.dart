@@ -363,7 +363,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   
   player = Player(
     configuration: PlayerConfiguration(
-      libmpvOptions: isAndroidTV ? {
+      options: isAndroidTV ? {
         // ===== ANDROID TV SPEZIFISCHE OPTIONEN =====
         "hwdec": "mediacodec",
         "vo": "mediacodec_embed",           // TV-spezifischer Video Output
