@@ -1,17 +1,16 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
 }
 
 android {
     namespace = "com.ryan.anymex"
-    compileSdk = 36
-    // ndkVersion = flutter.ndkVersion
+    compileSdk = 35
+
     ndkVersion = "27.0.12077973"
 
-     dependenciesInfo {
+    dependenciesInfo {
         includeInApk = false
         includeInBundle = false
     }
@@ -22,13 +21,13 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        jvmTarget = "1.8"
     }
 
     defaultConfig {
         applicationId = "com.ryan.anymex"
         minSdk = 23
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -36,6 +35,10 @@ android {
     packagingOptions {
         jniLibs {
             useLegacyPackaging true
+            keepDebugSymbols += "**/*.so"
+        }
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
     
@@ -57,6 +60,7 @@ android {
         release {
             signingConfig = signingConfigs.release
             minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
