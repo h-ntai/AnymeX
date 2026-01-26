@@ -179,8 +179,8 @@ jobs:
         run: |
           flutter pub get
           dart run flutter_native_splash:create
-          flutter build apk --split-per-abi
-          flutter build apk --release
+          flutter build apk --split-per-abi --no-tree-shake-icons --release
+          flutter build apk --release --no-tree-shake-icons
           cd build/app/outputs/flutter-apk
           mv app-armeabi-v7a-release.apk AnymeX-Android-armeabi-v7a.apk
           mv app-arm64-v8a-release.apk AnymeX-Android-arm64-v8a.apk
