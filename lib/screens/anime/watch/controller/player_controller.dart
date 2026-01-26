@@ -105,6 +105,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   late Player player;
   late VideoController playerController;
 
+  Timer? _loadTimeoutTimer;
+
   Episode? get savedEpisode => offlineStorage.getWatchedEpisode(
       anilistData.id, currentEpisode.value.number);
 
@@ -356,24 +358,45 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
   void _initializePlayer() {
     player = Player(
-        configuration: const PlayerConfiguration(
-      bufferSize: 1024 * 1024 * 32,
-    ));
-    playerController = VideoController(player,
-        configuration: VideoControllerConfiguration(
-            androidAttachSurfaceAfterVideoParameters:
-                Platform.isAndroid ? true : null));
+      configuration: const PlayerConfiguration(
+        // This is the essential part for Android TV Hardware Acceleration
+        libmpvOptions: {
+          "hwdec": "mediacodec-copy", // Force Android Hardware Decoder
+          "gpu-context": "android",
+          "vo": "gpu",
+          "demuxer-max-bytes": "150M",
+          "demuxer-max-back-bytes": "50M",
+          "tls-verify": "no",
+        },
+        bufferSize: 1024 * 1024 * 64, // Increased to 64MB
+      ),
+    );
+
+    playerController = VideoController(
+      player,
+      configuration: VideoControllerConfiguration(
+        androidAttachSurfaceAfterVideoParameters: Platform.isAndroid ? true : null,
+      ),
+    );
+
+    Timer(const Duration(seconds: 20), () {
+      if (player.state.width == null && Get.currentRoute.contains('watch')) {
+        Get.back();
+        snackBar('Connection timeout: 1080p stream taking too long.');
+      }
+    });
 
     if (isOffline.value && offlineVideoPath != null) {
-      final stamp = settingsController.preferences
-          .get(offlineVideoPath, defaultValue: null);
-      player.open(
-          Media(offlineVideoPath!, start: Duration(milliseconds: stamp ?? 0)));
+      final stamp = settings.preferences.get(offlineVideoPath, defaultValue: null);
+      player.open(Media(offlineVideoPath!, start: Duration(milliseconds: stamp ?? 0)));
     } else {
-      player.open(Media(selectedVideo.value!.url,
+      player.open(
+        Media(
+          selectedVideo.value!.url,
           httpHeaders: selectedVideo.value!.headers,
-          start: Duration(
-              milliseconds: savedEpisode?.timeStampInMilliseconds ?? 0)));
+          start: Duration(milliseconds: savedEpisode?.timeStampInMilliseconds ?? 0),
+        ),
+      );
     }
 
     _performInitialTracking();
@@ -478,9 +501,15 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     }));
 
     _subscriptions.add(player.stream.error.listen((e) {
-      Logger.i(e);
-      if (e.toString().contains('Failed to open')) {
-        snackBar('Failed, Dont Bother..');
+      Logger.i("MediaKit Error: $e");
+      
+      if (Get.isSnackbarOpen == false) {
+        snackBar('Playback failed. Reverting to avoid app freeze.');
+        Future.delayed(const Duration(milliseconds: 500), () {
+           if (Get.currentRoute.contains('watch')) {
+             Get.back();
+           }
+        });
       }
     }));
 
@@ -490,6 +519,11 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
     _subscriptions.add(player.stream.height.listen((height) {
       videoHeight.value = height;
+      // If height is detected, the video has successfully loaded
+      if (height != null && height > 0) {
+        _loadTimeoutTimer?.cancel(); 
+        Logger.i("Video detected: Hardware acceleration active.");
+      }
     }));
 
     _subscriptions.add(player.stream.completed.listen((e) {
@@ -685,10 +719,19 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
   Future<void> _switchMedia(String url, Map<String, String>? headers,
       {Duration? startPosition}) async {
-    await player.open(Media(''));
-    await player.open(Media(url, httpHeaders: headers, start: startPosition));
-  }
+    _loadTimeoutTimer?.cancel();
+    _loadTimeoutTimer = Timer(const Duration(seconds: 20), () {
+      if (player.state.width == null && Get.currentRoute.contains('watch')) {
+        Get.back();
+        snackBar('Qualitätswechsel fehlgeschlagen.');
+      }
+    });
 
+    await player.open(
+      Media(url, httpHeaders: headers, start: startPosition),
+      play: true,
+    );
+  }
   void delete() {
     Future.microtask(() async {
       _trackLocally();
@@ -706,6 +749,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     for (final subscription in _subscriptions) {
       subscription.cancel();
     }
+    _loadTimeoutTimer?.cancel();
     player.dispose();
     _seekDebounce?.cancel();
     _brightnessTimer?.cancel();
@@ -995,7 +1039,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
   Future<void> _trackLocally() async {
     if (isOffline.value) {
-      settingsController.preferences
+      settings.preferences
           .put(offlineVideoPath, currentPosition.value.inMilliseconds);
       return;
     }
