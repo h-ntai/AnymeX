@@ -357,51 +357,65 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   }
 
   void _initializePlayer() {
-    player = Player(
-      configuration: const PlayerConfiguration(
-        // This is the essential part for Android TV Hardware Acceleration
-        libmpvOptions: {
-          "hwdec": "mediacodec-copy", // Force Android Hardware Decoder
-          "gpu-context": "android",
-          "vo": "gpu",
-          "demuxer-max-bytes": "150M",
-          "demuxer-max-back-bytes": "50M",
-          "tls-verify": "no",
-        },
-        bufferSize: 1024 * 1024 * 64, // Increased to 64MB
-      ),
-    );
-
-    playerController = VideoController(
-      player,
-      configuration: VideoControllerConfiguration(
-        androidAttachSurfaceAfterVideoParameters: Platform.isAndroid ? true : null,
-      ),
-    );
-
-    Timer(const Duration(seconds: 20), () {
-      if (player.state.width == null && Get.currentRoute.contains('watch')) {
-        Get.back();
-        snackBar('Connection timeout: 1080p stream taking too long.');
-      }
-    });
-
-    if (isOffline.value && offlineVideoPath != null) {
-      final stamp = settings.preferences.get(offlineVideoPath, defaultValue: null);
-      player.open(Media(offlineVideoPath!, start: Duration(milliseconds: stamp ?? 0)));
-    } else {
-      player.open(
-        Media(
-          selectedVideo.value!.url,
-          httpHeaders: selectedVideo.value!.headers,
-          start: Duration(milliseconds: savedEpisode?.timeStampInMilliseconds ?? 0),
-        ),
-      );
+  // TV-Gerät erkennen
+  final isTV = Platform.isAndroid && 
+               (Platform.environment.containsKey('ANDROID_TV') || 
+                MediaQuery.of(Get.context!).size.shortestSide >= 600);
+  
+  player = Player(
+    configuration: PlayerConfiguration(
+      libmpvOptions: isTV ? {
+        "hwdec": "mediacodec",
+        "vo": "mediacodec_embed",
+        "gpu-context": "android",
+        "opengl-es": "yes",
+        "demuxer-max-bytes": "100M",
+        "demuxer-max-back-bytes": "30M",
+        "tls-verify": "no",
+        "cache": "yes",
+        "cache-secs": "10",
+      } : {
+        "hwdec": "mediacodec-copy",
+        "gpu-context": "android",
+        "vo": "gpu",
+        "demuxer-max-bytes": "150M",
+        "demuxer-max-back-bytes": "50M",
+        "tls-verify": "no",
+      },
+      bufferSize: 1024 * 1024 * 64,
+    ),
+  );
+  
+  playerController = VideoController(
+    player,
+    configuration: VideoControllerConfiguration(
+      androidAttachSurfaceAfterVideoParameters: Platform.isAndroid && !isTV ? true : false,
+    ),
+  );
+  
+  Timer(const Duration(seconds: 20), () {
+    if (player.state.width == null && Get.currentRoute.contains('watch')) {
+      Get.back();
+      snackBar('Connection timeout: 1080p stream taking too long.');
     }
-
-    _performInitialTracking();
-    applySavedProfile();
+  });
+  
+  if (isOffline.value && offlineVideoPath != null) {
+    final stamp = settings.preferences.get(offlineVideoPath, defaultValue: null);
+    player.open(Media(offlineVideoPath!, start: Duration(milliseconds: stamp ?? 0)));
+  } else {
+    player.open(
+      Media(
+        selectedVideo.value!.url,
+        httpHeaders: selectedVideo.value!.headers,
+        start: Duration(milliseconds: savedEpisode?.timeStampInMilliseconds ?? 0),
+      ),
+    );
   }
+  
+  _performInitialTracking();
+  applySavedProfile();
+}
 
   void _initializeAniSkip() {
     isOPSkippedOnce.value = false;
