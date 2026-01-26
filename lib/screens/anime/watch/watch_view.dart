@@ -64,11 +64,13 @@ class _WatchScreenState extends State<WatchScreen> {
       children: [
         Obx(() {
           return Video(
+            key: const ValueKey('android_tv_video_player'), // Stabiler Key für TV
             filterQuality: FilterQuality.medium,
             controls: null,
             controller: controller.playerController,
             fit: controller.videoFit.value,
             resumeUponEnteringForegroundMode: true,
+            wakelock: true, // WICHTIG: Screen-Wakelock
             subtitleViewConfiguration:
                 const SubtitleViewConfiguration(visible: false),
           );
