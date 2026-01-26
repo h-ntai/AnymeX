@@ -26,6 +26,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:anymex/main.dart' show isAndroidTV;
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:rxdart/rxdart.dart' show ThrottleExtensions;
@@ -357,24 +358,40 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   }
 
   void _initializePlayer() {
-  // TV-Gerät erkennen
-  final isTV = Platform.isAndroid && 
-               (Platform.environment.containsKey('ANDROID_TV') || 
-                MediaQuery.of(Get.context!).size.shortestSide >= 600);
+  // Import der globalen isAndroidTV Variable aus main.dart
+  // import 'package:anymex/main.dart' show isAndroidTV;
   
   player = Player(
     configuration: PlayerConfiguration(
-      libmpvOptions: isTV ? {
+      libmpvOptions: isAndroidTV ? {
+        // ===== ANDROID TV SPEZIFISCHE OPTIONEN =====
         "hwdec": "mediacodec",
-        "vo": "mediacodec_embed",
+        "vo": "mediacodec_embed",           // TV-spezifischer Video Output
         "gpu-context": "android",
         "opengl-es": "yes",
+        
+        // Buffering für TV optimiert
         "demuxer-max-bytes": "100M",
         "demuxer-max-back-bytes": "30M",
-        "tls-verify": "no",
         "cache": "yes",
-        "cache-secs": "10",
+        "cache-secs": "15",                 // Mehr Pre-Caching
+        "cache-on-disk": "yes",
+        
+        // Network-Optimierung
+        "tls-verify": "no",
+        "stream-buffer-size": "8M",
+        
+        // Video-Ausgabe Optimierung
+        "video-sync": "display-resample",   // Bessere Frame-Synchronisation
+        "interpolation": "no",              // Kein Frame-Interpolation für Stabilität
+        
+        // Audio
+        "audio-buffer": "1.0",
+        
+        // Debugging (später entfernen)
+        "msg-level": "all=v",               // Verbose Logging
       } : {
+        // ===== MOBILE/STANDARD OPTIONEN =====
         "hwdec": "mediacodec-copy",
         "gpu-context": "android",
         "vo": "gpu",
@@ -382,21 +399,51 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
         "demuxer-max-back-bytes": "50M",
         "tls-verify": "no",
       },
-      bufferSize: 1024 * 1024 * 64,
+      bufferSize: isAndroidTV ? 1024 * 1024 * 32 : 1024 * 1024 * 64,
     ),
   );
   
   playerController = VideoController(
     player,
     configuration: VideoControllerConfiguration(
-      androidAttachSurfaceAfterVideoParameters: Platform.isAndroid && !isTV ? true : false,
+      androidAttachSurfaceAfterVideoParameters: !isAndroidTV,
     ),
   );
+  
+  if (isAndroidTV) {
+    debugPrint('=== ANDROID TV MODE ACTIVATED ===');
+    
+    player.stream.width.listen((width) {
+      debugPrint('=== TV PLAYER WIDTH: $width');
+    });
+    
+    player.stream.height.listen((height) {
+      debugPrint('=== TV PLAYER HEIGHT: $height');
+    });
+    
+    player.stream.playing.listen((playing) {
+      debugPrint('=== TV PLAYER PLAYING: $playing');
+    });
+    
+    player.stream.buffering.listen((buffering) {
+      debugPrint('=== TV PLAYER BUFFERING: $buffering');
+    });
+    
+    player.stream.error.listen((error) {
+      debugPrint('=== TV PLAYER ERROR: $error');
+    });
+    
+    player.stream.log.listen((event) {
+      if (event.level == 'error' || event.level == 'fatal') {
+        debugPrint('=== TV MPV LOG [${event.level}]: ${event.text}');
+      }
+    });
+  }
   
   Timer(const Duration(seconds: 20), () {
     if (player.state.width == null && Get.currentRoute.contains('watch')) {
       Get.back();
-      snackBar('Connection timeout: 1080p stream taking too long.');
+      snackBar('Connection timeout: Stream taking too long to load.');
     }
   });
   
@@ -411,6 +458,15 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
         start: Duration(milliseconds: savedEpisode?.timeStampInMilliseconds ?? 0),
       ),
     );
+  }
+  
+  if (isAndroidTV) {
+    Timer(const Duration(milliseconds: 500), () {
+      if (player.state.playing == false) {
+        debugPrint('=== TV: Forcing play after delay');
+        player.play();
+      }
+    });
   }
   
   _performInitialTracking();
