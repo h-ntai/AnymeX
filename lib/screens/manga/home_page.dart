@@ -47,8 +47,7 @@ class _MangaHomePageState extends State<MangaHomePage> {
     bool isTV = Get.find<Settings>().isTV.value;
     if (isTV) {
       final isDesktop = true
-      }
-    else {
+    } else {
       final isDesktop = MediaQuery.of(context).size.width > 600;
     }
     final statusBarHeight = MediaQuery.of(context).padding.top;
