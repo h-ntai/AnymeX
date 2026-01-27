@@ -141,6 +141,18 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     mediaService = widget.anilistData.serviceType;
+    
+    if (settings.isTV.value) {
+      final tempDir = Directory.systemTemp;
+      if (tempDir.existsSync()) {
+        final cacheDir = Directory('${tempDir.path}/anymex_cache');
+        if (!cacheDir.existsSync()) {
+          cacheDir.createSync(recursive: true);
+        }
+      }
+      
+      settings.preferences.put('shaders_enabled', false);
+    }
     _initOrientations();
     _leftAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
@@ -238,6 +250,21 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   }
 
   PlayerConfiguration getPlayerConfig(bool shadersEnabled) {
+    if (settings.isTV.value) {
+      return const PlayerConfiguration(
+        // Disable hardware acceleration for TV
+        hardwareAcceleration: false,
+        // Use software decoding for compatibility
+        videoOutput: 'gpu',
+        // Enable file cache
+        fileCaching: true,
+        // Additional TV-specific options
+        android: AndroidPlayerConfiguration(
+          surface: true, // Force surface rendering
+          mediaCodec: false, // Disable hardware codec initially
+        ),
+      );
+    }
     if (shadersEnabled) {
       return const PlayerConfiguration();
     }
@@ -258,9 +285,17 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
       player = Player(
         configuration: getPlayerConfig(areShadersEnabled),
       );
-      playerController = VideoController(player,
-          configuration: const VideoControllerConfiguration(
-              androidAttachSurfaceAfterVideoParameters: true));
+      if (settings.isTV.value) {
+        playerController = VideoController(player,
+            configuration: const VideoControllerConfiguration(
+              androidAttachSurfaceAfterVideoParameters: false, // Changed for TV
+              enableHardwareAcceleration: false, // Disable for TV
+            ));
+      } else {
+        playerController = VideoController(player,
+            configuration: const VideoControllerConfiguration(
+                androidAttachSurfaceAfterVideoParameters: true));
+      }
     } else {
       currentPosition.value = Duration.zero;
       episodeDuration.value = Duration.zero;
@@ -815,52 +850,59 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   }
 
   Obx _buildPlayer(BuildContext context) {
-    return Obx(() => Row(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: isEpisodeDialogOpen.value
-                  ? Get.width *
-                      getResponsiveSize(context,
-                          mobileSize: 0.6, desktopSize: 0.7, isStrict: true)
-                  : Get.width,
-              child: Video(
-                controller: playerController,
-                controls: null,
-                fit: resizeModes[resizeMode.value]!,
-                subtitleViewConfiguration: const SubtitleViewConfiguration(
-                  visible: false,
-                ),
+    return Obx(() {
+      // Android TV-spezifische Behandlung
+      if (settings.isTV.value) {
+        return _buildTVPlayer(context);
+      }
+      
+      return Row(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            width: isEpisodeDialogOpen.value
+                ? Get.width *
+                    getResponsiveSize(context,
+                        mobileSize: 0.6, desktopSize: 0.7, isStrict: true)
+                : Get.width,
+            child: Video(
+              controller: playerController,
+              controls: null,
+              fit: resizeModes[resizeMode.value] ?? BoxFit.cover,
+              subtitleViewConfiguration: const SubtitleViewConfiguration(
+                visible: false,
               ),
             ),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: isEpisodeDialogOpen.value
-                  ? Get.width *
-                      getResponsiveSize(context,
-                          mobileSize: 0.4, desktopSize: 0.3, isStrict: true)
-                  : 0,
-              child: Focus(
-                focusNode: FocusNode(
-                    canRequestFocus: isEpisodeDialogOpen.value,
-                    skipTraversal: !isEpisodeDialogOpen.value,
-                    descendantsAreFocusable: isEpisodeDialogOpen.value,
-                    descendantsAreTraversable: isEpisodeDialogOpen.value),
-                child: EpisodeWatchScreen(
-                  episodeList: episodeList.value,
-                  anilistData: anilistData.value,
-                  currentEpisode: currentEpisode.value,
-                  onEpisodeSelected: (src, streamList, selectedEpisode) {
-                    episode.value = src;
-                    episodeTracks.value = streamList;
-                    currentEpisode.value = selectedEpisode;
-                    _initPlayer(false);
-                  },
-                ),
+          ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            width: isEpisodeDialogOpen.value
+                ? Get.width *
+                    getResponsiveSize(context,
+                        mobileSize: 0.4, desktopSize: 0.3, isStrict: true)
+                : 0,
+            child: Focus(
+              focusNode: FocusNode(
+                  canRequestFocus: isEpisodeDialogOpen.value,
+                  skipTraversal: !isEpisodeDialogOpen.value,
+                  descendantsAreFocusable: isEpisodeDialogOpen.value,
+                  descendantsAreTraversable: isEpisodeDialogOpen.value),
+              child: EpisodeWatchScreen(
+                episodeList: episodeList.value,
+                anilistData: anilistData.value,
+                currentEpisode: currentEpisode.value,
+                onEpisodeSelected: (src, streamList, selectedEpisode) {
+                  episode.value = src;
+                  episodeTracks.value = streamList;
+                  currentEpisode.value = selectedEpisode;
+                  _initPlayer(false);
+                },
               ),
-            )
-          ],
-        ));
+            ),
+          )
+        ],
+      );
+    });
   }
 
   final prevRate = 1.0.obs;
@@ -2009,6 +2051,60 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
         ),
       );
     });
+  }
+
+  Widget _buildTVPlayer(BuildContext context) {
+    return Row(
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          width: isEpisodeDialogOpen.value
+              ? Get.width *
+                  getResponsiveSize(context,
+                      mobileSize: 0.6, desktopSize: 0.7, isStrict: true)
+              : Get.width,
+          child: _buildTVVideoWidget(),
+        ),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          width: isEpisodeDialogOpen.value
+              ? Get.width *
+                  getResponsiveSize(context,
+                      mobileSize: 0.4, desktopSize: 0.3, isStrict: true)
+              : 0,
+          child: Focus(
+            focusNode: FocusNode(
+                canRequestFocus: isEpisodeDialogOpen.value,
+                skipTraversal: !isEpisodeDialogOpen.value,
+                descendantsAreFocusable: isEpisodeDialogOpen.value,
+                descendantsAreTraversable: isEpisodeDialogOpen.value),
+            child: EpisodeWatchScreen(
+              episodeList: episodeList.value,
+              anilistData: anilistData.value,
+              currentEpisode: currentEpisode.value,
+              onEpisodeSelected: (src, streamList, selectedEpisode) {
+                episode.value = src;
+                episodeTracks.value = streamList;
+                currentEpisode.value = selectedEpisode;
+                _initPlayer(false);
+              },
+            ),
+          ),
+        )
+      ],
+    );
+  }
+  
+  Widget _buildTVVideoWidget() {
+    // Für Android TV: Einfacherer Fallback oder alternative Implementierung
+    return Video(
+      controller: playerController,
+      controls: null,
+      fit: BoxFit.contain, // Auf TV verwenden wir contain statt cover
+      subtitleViewConfiguration: const SubtitleViewConfiguration(
+        visible: false,
+      ),
+    );
   }
 
   Widget _buildPlaybackButton({
