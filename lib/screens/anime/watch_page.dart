@@ -146,8 +146,6 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
     if (settings.isTV.value) {
       resizeMode.value = "Contain";
       // TV-spezifische Player-Einstellungen
-      playerSettings.forceSoftwareDecoding = true;
-      playerSettings.enableHardwareAcceleration = false;
       final tempDir = Directory.systemTemp;
       if (tempDir.existsSync()) {
         final cacheDir = Directory('${tempDir.path}/anymex_cache');
