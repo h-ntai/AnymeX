@@ -1,6 +1,17 @@
 import 'dart:io';
 import 'package:anymex/constants/contants.dart';
+import 'package:anymex/controllers/settings/settings.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+bool _isMobileDevice() {
+  try {
+    final settings = Get.find<Settings>();
+    if (settings.isTV.value) return false; // Android TV is NOT mobile
+  } catch (e) {
+  }
+  return Platform.isAndroid || Platform.isIOS;
+}
 
 double getResponsiveSize(context,
     {required double mobileSize,
@@ -8,7 +19,7 @@ double getResponsiveSize(context,
     bool isStrict = false}) {
   final currentWidth = MediaQuery.of(context).size.width;
   if (isStrict) {
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (_isMobileDevice()) {
       return mobileSize;
     } else {
       return desktopSize;
@@ -32,7 +43,7 @@ dynamic getResponsiveValueWithTablet(
   final currentWidth = MediaQuery.of(context).size.width;
   const double maxMobileWidth = 600;
   const double maxTabletWidth = 1024;
-  final bool isMobilePlatform = Platform.isAndroid || Platform.isIOS;
+  final bool isMobilePlatform = _isMobileDevice();
 
   if (strictMode) {
     if (!isMobilePlatform) {
@@ -56,7 +67,7 @@ dynamic getResponsiveValue(context,
     required dynamic desktopValue,
     bool strictMode = false}) {
   final currentWidth = MediaQuery.of(context).size.width;
-  final isMobile = Platform.isAndroid || Platform.isIOS;
+  final isMobile = _isMobileDevice();
   if (strictMode) {
     if (!isMobile) {
       return desktopValue;
@@ -74,7 +85,7 @@ dynamic getResponsiveValue(context,
 
 dynamic getPlatform(context, {bool strictMode = false}) {
   final currentWidth = MediaQuery.of(context).size.width;
-  final isMobile = Platform.isAndroid || Platform.isIOS;
+  final isMobile = _isMobileDevice();
   if (strictMode) {
     if (!isMobile) {
       return true;
@@ -130,7 +141,7 @@ class PlatformBuilder extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       if (strictMode) {
-        if (!Platform.isAndroid && !Platform.isIOS) {
+        if (!_isMobileDevice()) {
           return desktopBuilder;
         } else {
           return androidBuilder;
@@ -167,7 +178,7 @@ class PlatformBuilderWithTablet extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (strictMode) {
-          if (!Platform.isAndroid && !Platform.isIOS) {
+          if (!_isMobileDevice()) {
             return desktopBuilder;
           } else if (constraints.maxWidth > maxMobileWidth) {
             return tabletBuilder;
