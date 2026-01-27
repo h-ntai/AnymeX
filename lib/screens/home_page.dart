@@ -56,13 +56,20 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final cacheController = Get.find<CacheController>();
     final serviceHandler = Get.find<ServiceHandler>();
-    final isDesktop = MediaQuery.of(context).size.width > 600;
+    bool isTV = Get.find<Settings>().isTV.value;
+    if (isTV) {
+      final isDesktop = True
+      }
+    else {
+      final isDesktop = MediaQuery.of(context).size.width > 600;
+    }
     final statusBarHeight = MediaQuery.of(context).padding.top;
     const appBarHeight = kToolbarHeight + 20;
     final double bottomNavBarHeight = MediaQuery.of(context).padding.bottom;
 
     bool isMobile =
         getResponsiveValue(context, desktopValue: false, mobileValue: true);
+
 
     final TextAlign textAlignment =
         isMobile ? TextAlign.center : TextAlign.left;
