@@ -58,6 +58,7 @@ class Settings extends GetxController {
     isTv().then((e) {
       isTV.value = e;
     });
+    _loadDesktopLayoutPreference();
     PlayerShaders.createMpvConfigFolder();
     PlayerShaders.getMpvPath().then((e) {
       mpvPath.value = e;
@@ -278,5 +279,17 @@ class Settings extends GetxController {
     var uiBox = Hive.box<UISettings>("UiSettings");
     uiBox.put('settings', uiSettings.value);
     update();
+  }
+  Future<void> _loadDesktopLayoutPreference() async {
+    forceDesktopLayout.value = preferences.get('force_desktop_layout', defaultValue: false);
+  }
+  
+  Future<void> setForceDesktopLayout(bool value) async {
+    await preferences.put('force_desktop_layout', value);
+    forceDesktopLayout.value = value;
+  }
+  
+  bool get shouldUseDesktopLayout {
+    return forceDesktopLayout.value || isTV.value;
   }
 }
