@@ -132,8 +132,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   if (isTV) {
     final isMobile = false
     final isDesktop = true
-    }
-  else {
+  } else {
     final isDesktop = MediaQuery.of(context).size.width > 600;
     final isMobile = !isDesktop
   }
