@@ -43,11 +43,7 @@ class _AnimeHomePageState extends State<AnimeHomePage> {
   Widget build(BuildContext context) {
     final serviceHandler = Get.find<ServiceHandler>();
     bool isTV = Get.find<Settings>().isTV.value;
-    if (isTV) {
-      final isDesktop = true;
-    } else {
-      final isDesktop = MediaQuery.of(context).size.width > 600;
-    }
+    final isDesktop = isTV ? true : MediaQuery.of(context).size.width > 600;
     final statusBarHeight = MediaQuery.of(context).padding.top;
     const appBarHeight = kToolbarHeight + 20;
     final double bottomNavBarHeight = MediaQuery.of(context).padding.bottom;
