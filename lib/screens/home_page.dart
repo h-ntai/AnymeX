@@ -253,8 +253,10 @@ class _HomePageState extends State<HomePage> {
                 radius: 24,
                 child: Obx(() => Text(
                   serviceHandler.isLoggedIn.value
-                      ? serviceHandler.profileData.value.name[0].toUpperCase()
-                      : 'G',
+                      ? (serviceHandler.profileData.value.name?.isNotEmpty ?? false) 
+                        ? serviceHandler.profileData.value.name![0].toUpperCase() 
+                        : 'G'
+                                          : 'G',
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 )),
               ),
