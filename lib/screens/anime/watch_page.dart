@@ -140,9 +140,14 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    final settings = Get.find<Settings>();
     mediaService = widget.anilistData.serviceType;
     
     if (settings.isTV.value) {
+      resizeMode.value = "Contain";
+      // TV-spezifische Player-Einstellungen
+      playerSettings.forceSoftwareDecoding = true;
+      playerSettings.enableHardwareAcceleration = false;
       final tempDir = Directory.systemTemp;
       if (tempDir.existsSync()) {
         final cacheDir = Directory('${tempDir.path}/anymex_cache');
@@ -250,21 +255,20 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   }
 
   PlayerConfiguration getPlayerConfig(bool shadersEnabled) {
+    final settings = Get.find<Settings>();
     if (settings.isTV.value) {
       return const PlayerConfiguration(
-        // Disable hardware acceleration for TV
-        hardwareAcceleration: false,
-        // Use software decoding for compatibility
-        videoOutput: 'gpu',
-        // Enable file cache
-        fileCaching: true,
-        // Additional TV-specific options
-        android: AndroidPlayerConfiguration(
-          surface: true, // Force surface rendering
-          mediaCodec: false, // Disable hardware codec initially
-        ),
+        options: {
+          "vo": "gpu",
+          "hwdec": "no",
+          "gpu-context": "android",
+          "cache": "yes",
+          "cache-secs": "30",
+        },
+        bufferSize: 32 * 1024 * 1024,
       );
     }
+    
     if (shadersEnabled) {
       return const PlayerConfiguration();
     }
