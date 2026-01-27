@@ -128,14 +128,6 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   final isEpisodeDialogOpen = false.obs;
   late bool isLoggedIn;
   final leftOriented = true.obs;
-  bool isTV = Get.find<Settings>().isTV.value;
-  if (isTV) {
-    final isMobile = false
-    final isDesktop = true
-  } else {
-    final isDesktop = MediaQuery.of(context).size.width > 600;
-    final isMobile = !isDesktop
-  }
 
   // Video Player Visual Profile
   final currentVisualProfile = 'natural'.obs;
@@ -148,6 +140,14 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     final settings = Get.find<Settings>();
+    bool isTV = Get.find<Settings>().isTV.value;
+    if (isTV) {
+      final isMobile = false;
+      final isDesktop = true;
+    } else {
+      final isDesktop = MediaQuery.of(context).size.width > 600;
+      final isMobile = !isDesktop;
+    }
     mediaService = widget.anilistData.serviceType;
     
     if (settings.isTV.value) {
