@@ -128,7 +128,13 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   final isEpisodeDialogOpen = false.obs;
   late bool isLoggedIn;
   final leftOriented = true.obs;
-  final isMobile = Platform.isAndroid || Platform.isIOS;
+  bool isTV = Get.find<Settings>().isTV.value;
+  if (isTV) {
+    final isMobile = False
+    }
+  else {
+    final isDesktop = MediaQuery.of(context).size.width > 600;
+  }
 
   // Video Player Visual Profile
   final currentVisualProfile = 'natural'.obs;
