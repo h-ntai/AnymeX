@@ -141,12 +141,8 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
     super.initState();
     final settings = Get.find<Settings>();
     bool isTV = Get.find<Settings>().isTV.value;
-    if (settings.isTV.value) {
-      final isMobile = false;
-      final isDesktop = true;
-    } else {
-      final isDesktop = MediaQuery.of(context).size.width > 600;
-      final isMobile = !isDesktop;
+    final isDesktop = isTV ? true : MediaQuery.of(context).size.width > 600;
+    final isMobile = isTV ? false : !isDesktop;
     }
     mediaService = widget.anilistData.serviceType;
     
@@ -1995,7 +1991,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
     Color? color,
     Color? iconColor,
   }) {
-    final isMobile = Platform.isAndroid || Platform.isIOS;
+    final isMobile = !settings.isTV.value && (Platform.isAndroid || Platform.isIOS);
     final padding = getResponsiveSize(
       context,
       mobileSize: 10,
@@ -2124,7 +2120,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   }) {
     final isPlay =
         icon == Icons.play_arrow_rounded || icon == Icons.pause_rounded;
-    final isMobile = Platform.isAndroid || Platform.isIOS;
+    final isMobile = !settings.isTV.value && (Platform.isAndroid || Platform.isIOS);
     final padding = getResponsiveSize(context,
         mobileSize: isPlay ? 10 : 5,
         desktopSize: isPlay ? 20 : 10,
