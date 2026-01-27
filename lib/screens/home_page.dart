@@ -55,16 +55,16 @@ class _HomePageState extends State<HomePage> {
   }
   @override
   Widget build(BuildContext context) {
-    return ResponsiveBuilder(
-      builder: (context, isDesktop) {
-        if (isDesktop) {
-          return _buildDesktopLayout();
-        }
-        return _buildMobileLayout();
-      },
-    );
+    final settings = Get.find<Settings>();
+    
+    return Obx(() {
+      if (settings.shouldUseDesktopLayout) {
+        return _buildDesktopLayout();
+      }
+      return _buildCurrentLayout();
+    });
   }
-  Widget _buildMobileLayout() {
+  Widget _buildCurrentLayout() {
     final cacheController = Get.find<CacheController>();
     final serviceHandler = Get.find<ServiceHandler>();
     final isDesktop = MediaQuery.of(context).size.width > 600;
