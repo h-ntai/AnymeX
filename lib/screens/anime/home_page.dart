@@ -44,7 +44,7 @@ class _AnimeHomePageState extends State<AnimeHomePage> {
     final serviceHandler = Get.find<ServiceHandler>();
     bool isTV = Get.find<Settings>().isTV.value;
     if (isTV) {
-      final isDesktop = true
+      final isDesktop = true;
     } else {
       final isDesktop = MediaQuery.of(context).size.width > 600;
     }
