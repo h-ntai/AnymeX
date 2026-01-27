@@ -4,6 +4,7 @@ import 'package:anymex/controllers/source/source_controller.dart';
 import 'package:anymex/widgets/header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:anymex/controllers/settings/settings.dart';
 
 import 'package:get/get.dart';
 
@@ -45,7 +46,7 @@ class _MangaHomePageState extends State<MangaHomePage> {
     final serviceHandler = Get.find<ServiceHandler>();
     bool isTV = Get.find<Settings>().isTV.value;
     if (isTV) {
-      final isDesktop = True
+      final isDesktop = true
       }
     else {
       final isDesktop = MediaQuery.of(context).size.width > 600;
