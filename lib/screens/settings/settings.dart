@@ -119,7 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: "Developers",
                   description: "Advanced options and TV layout settings",
                   onTap: () async {
-                    navigate(() => const const ExperimentalFeaturesPage());
+                    navigate(() => const ExperimentalFeaturesPage());
                   },
                 ),
                 const SizedBox(height: 10),
