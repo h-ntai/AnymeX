@@ -26,7 +26,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:anymex/main.dart' show isAndroidTV;
+import 'package:anymex/main.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:rxdart/rxdart.dart' show ThrottleExtensions;
@@ -358,121 +358,208 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   }
 
   void _initializePlayer() {
-  // Import der globalen isAndroidTV Variable aus main.dart
-  // import 'package:anymex/main.dart' show isAndroidTV;
-  
-  player = Player(
-    configuration: PlayerConfiguration(
-      options: isAndroidTV ? {
-        // ===== ANDROID TV SPEZIFISCHE OPTIONEN =====
-        "hwdec": "mediacodec",
-        "vo": "mediacodec_embed",           // TV-spezifischer Video Output
-        "gpu-context": "android",
-        "opengl-es": "yes",
-        
-        // Buffering für TV optimiert
-        "demuxer-max-bytes": "100M",
-        "demuxer-max-back-bytes": "30M",
-        "cache": "yes",
-        "cache-secs": "15",                 // Mehr Pre-Caching
-        "cache-on-disk": "yes",
-        
-        // Network-Optimierung
-        "tls-verify": "no",
-        "stream-buffer-size": "8M",
-        
-        // Video-Ausgabe Optimierung
-        "video-sync": "display-resample",   // Bessere Frame-Synchronisation
-        "interpolation": "no",              // Kein Frame-Interpolation für Stabilität
-        
-        // Audio
-        "audio-buffer": "1.0",
-        
-        // Debugging (später entfernen)
-        "msg-level": "all=v",               // Verbose Logging
-      } : {
-        // ===== MOBILE/STANDARD OPTIONEN =====
-        "hwdec": "mediacodec-copy",
-        "gpu-context": "android",
-        "vo": "gpu",
-        "demuxer-max-bytes": "150M",
-        "demuxer-max-back-bytes": "50M",
-        "tls-verify": "no",
-      },
-      bufferSize: isAndroidTV ? 1024 * 1024 * 32 : 1024 * 1024 * 64,
-    ),
-  );
-  
-  playerController = VideoController(
-    player,
-    configuration: VideoControllerConfiguration(
-      androidAttachSurfaceAfterVideoParameters: !isAndroidTV,
-    ),
-  );
-  
-  if (isAndroidTV) {
-    debugPrint('=== ANDROID TV MODE ACTIVATED ===');
+    final settings = Get.find<Settings>();
+    final isTV = settings.isTV.value;
     
-    player.stream.width.listen((width) {
-      debugPrint('=== TV PLAYER WIDTH: $width');
-    });
+    debugPrint('=== Initializing Player ===');
+    debugPrint('Is Android TV: $isTV');
     
-    player.stream.height.listen((height) {
-      debugPrint('=== TV PLAYER HEIGHT: $height');
-    });
+    // Android TV-spezifische Konfiguration
+    if (isTV) {
+      debugPrint('=== CONFIGURING FOR ANDROID TV ===');
+      
+      // Erstelle ein sicheres Cache-Verzeichnis
+      final tempDir = Directory.systemTemp;
+      final cacheDir = Directory('${tempDir.path}/anymex_tv_cache');
+      if (!cacheDir.existsSync()) {
+        cacheDir.createSync(recursive: true);
+      }
+      
+      player = Player(
+        configuration: PlayerConfiguration(
+          // Android TV-spezifische Optionen
+          options: {
+            // ===== KRITISCHE OPTIONEN FÜR ANDROID TV =====
+            "vo": "gpu",                    // GPU Video Output
+            "gpu-context": "android",
+            
+            // Hardware acceleration - DEAKTIVIERT für TV Kompatibilität
+            "hwdec": "no",                  // Wichtig: Kein Hardware Decoding auf TV
+            "hwdec-codecs": "none",         // Keine Hardware Decoder
+            
+            // Cache-Einstellungen mit explizitem Pfad
+            "cache": "yes",
+            "cache-dir": cacheDir.path,     // Explizites Cache-Verzeichnis
+            "cache-secs": "30",             // Mehr Cache für TV
+            "demuxer-max-bytes": "200M",
+            "demuxer-max-back-bytes": "50M",
+            "cache-on-disk": "yes",
+            "demuxer-readahead-secs": "30",
+            
+            // Network optimiert für TV
+            "network-timeout": "30",
+            "stream-buffer-size": "10M",
+            "ytdl-raw-options": "force-ipv4=",
+            
+            // Video-Ausgabe optimiert
+            "video-sync": "display-resample",
+            "interpolation": "no",
+            "video-latency-hacks": "yes",
+            "scale": "spline36",
+            "cscale": "spline36",
+            "dscale": "spline36",
+            "tscale": "oversample",
+            
+            // Audio optimiert
+            "audio-buffer": "0.5",
+            "audio-client-name": "Anymex TV",
+            
+            // Performance
+            "vd-lavc-fast": "yes",
+            "vd-lavc-skiploopfilter": "none",
+            "vd-lavc-skipidct": "none",
+            "vd-lavc-threads": "2",
+            
+            // Debugging
+            "msg-level": "status=info,ffmpeg=error",
+          },
+          bufferSize: 32 * 1024 * 1024, // 32MB Buffer für TV
+        ),
+      );
+      
+      playerController = VideoController(
+        player,
+        configuration: const VideoControllerConfiguration(
+          androidAttachSurfaceAfterVideoParameters: false, // Wichtig für TV!
+          enableHardwareAcceleration: false,               // Deaktiviert für TV
+          enableControls: false,
+        ),
+      );
+      
+    } else {
+      // Standard-Konfiguration für Mobile/Desktop
+      player = Player(
+        configuration: PlayerConfiguration(
+          options: {
+            "hwdec": "mediacodec-copy",
+            "gpu-context": "android",
+            "vo": "gpu",
+            "demuxer-max-bytes": "150M",
+            "demuxer-max-back-bytes": "50M",
+          },
+          bufferSize: 64 * 1024 * 1024,
+        ),
+      );
+      
+      playerController = VideoController(
+        player,
+        configuration: const VideoControllerConfiguration(
+          androidAttachSurfaceAfterVideoParameters: true,
+        ),
+      );
+    }
     
-    player.stream.playing.listen((playing) {
-      debugPrint('=== TV PLAYER PLAYING: $playing');
-    });
-    
-    player.stream.buffering.listen((buffering) {
-      debugPrint('=== TV PLAYER BUFFERING: $buffering');
-    });
-    
-    player.stream.error.listen((error) {
-      debugPrint('=== TV PLAYER ERROR: $error');
-    });
-    
+    // Setze Log-Listener für Debugging
     player.stream.log.listen((event) {
-      if (event.level == 'error' || event.level == 'fatal') {
-        debugPrint('=== TV MPV LOG [${event.level}]: ${event.text}');
+      if (event.level == 'error' || event.level == 'fatal' || event.level == 'warn') {
+        debugPrint('=== MPV [${event.level.toUpperCase()}]: ${event.text}');
+        
+        // Spezifische Fehlerbehandlung für TV
+        if (isTV && event.text.contains('surface') || event.text.contains('native_window')) {
+          debugPrint('=== TV SURFACE ERROR - Retrying with fallback...');
+          _retryWithFallbackConfiguration();
+        }
       }
     });
+    
+    // Timeout für TV
+    if (isTV) {
+      _loadTimeoutTimer = Timer(const Duration(seconds: 30), () {
+        if (player.state.width == null && Get.currentRoute.contains('watch')) {
+          debugPrint('=== TV PLAYER TIMEOUT - Video not loaded');
+          snackBar('Video failed to load. Trying alternative configuration...');
+          _retryWithAlternativeStream();
+        }
+      });
+    } else {
+      _loadTimeoutTimer = Timer(const Duration(seconds: 20), () {
+        if (player.state.width == null && Get.currentRoute.contains('watch')) {
+          Get.back();
+          snackBar('Connection timeout: Stream taking too long to load.');
+        }
+      });
+    }
+    
+    // Video öffnen
+    if (isOffline.value && offlineVideoPath != null) {
+      final stamp = settings.preferences.get(offlineVideoPath, defaultValue: null);
+      player.open(Media(offlineVideoPath!, start: Duration(milliseconds: stamp ?? 0)));
+    } else {
+      player.open(
+        Media(
+          selectedVideo.value!.url,
+          httpHeaders: selectedVideo.value!.headers,
+          start: Duration(milliseconds: savedEpisode?.timeStampInMilliseconds ?? 0),
+        ),
+      );
+    }
+    
+    // Auto-Play für TV
+    if (isTV) {
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (!player.state.playing) {
+          debugPrint('=== TV: Auto-playing after delay');
+          player.play();
+        }
+      });
+    }
+    
+    _performInitialTracking();
+    applySavedProfile();
+  }
+
+  void _retryWithFallbackConfiguration() {
+    final isTV = Get.find<Settings>().isTV.value;
+    if (!isTV) return;
+    
+    debugPrint('=== Applying TV fallback configuration ===');
+    
+    // Alternative Configuration ohne GPU
+    player.setOption('vo', 'mediacodec_embed');
+    player.setOption('hwdec', 'mediacodec');
+    player.setOption('gpu-context', 'android');
+    
+    // Force software rendering fallback
+    player.setOption('vo', 'mediacodec_embed');
+    player.setOption('hwdec', 'no');
+    
+    // Seek to current position to restart
+    final currentPos = player.state.position;
+    player.seek(currentPos);
   }
   
-  Timer(const Duration(seconds: 20), () {
-    if (player.state.width == null && Get.currentRoute.contains('watch')) {
-      Get.back();
-      snackBar('Connection timeout: Stream taking too long to load.');
-    }
-  });
-  
-  if (isOffline.value && offlineVideoPath != null) {
-    final stamp = settings.preferences.get(offlineVideoPath, defaultValue: null);
-    player.open(Media(offlineVideoPath!, start: Duration(milliseconds: stamp ?? 0)));
-  } else {
+  void _retryWithAlternativeStream() {
+    final isTV = Get.find<Settings>().isTV.value;
+    if (!isTV || episodeTracks.length < 2) return;
+    
+    debugPrint('=== Trying alternative stream for TV ===');
+    
+    // Nächsten Stream versuchen
+    final currentIndex = episodeTracks.indexOf(selectedVideo.value!);
+    final nextIndex = (currentIndex + 1) % episodeTracks.length;
+    final alternativeTrack = episodeTracks[nextIndex];
+    
+    selectedVideo.value = alternativeTrack;
+    
     player.open(
       Media(
-        selectedVideo.value!.url,
-        httpHeaders: selectedVideo.value!.headers,
-        start: Duration(milliseconds: savedEpisode?.timeStampInMilliseconds ?? 0),
+        alternativeTrack.url,
+        httpHeaders: alternativeTrack.headers,
+        start: player.state.position,
       ),
     );
   }
   
-  if (isAndroidTV) {
-    Timer(const Duration(milliseconds: 500), () {
-      if (player.state.playing == false) {
-        debugPrint('=== TV: Forcing play after delay');
-        player.play();
-      }
-    });
-  }
-  
-  _performInitialTracking();
-  applySavedProfile();
-}
-
   void _initializeAniSkip() {
     isOPSkippedOnce.value = false;
     isEDSkippedOnce.value = false;
