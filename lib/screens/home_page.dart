@@ -287,7 +287,7 @@ class _HomePageState extends State<HomePage> {
           
           // Main Content Area - Reuse mobile layout
           Expanded(
-            child: _buildMobileLayout(),
+            child: _buildCurrentLayout(),
           ),
         ],
       ),
