@@ -3,6 +3,7 @@
 import 'package:anymex/widgets/header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:anymex/controllers/settings/settings.dart';
 
 import 'package:get/get.dart';
 
@@ -43,9 +44,8 @@ class _AnimeHomePageState extends State<AnimeHomePage> {
     final serviceHandler = Get.find<ServiceHandler>();
     bool isTV = Get.find<Settings>().isTV.value;
     if (isTV) {
-      final isDesktop = True
-      }
-    else {
+      final isDesktop = true
+    } else {
       final isDesktop = MediaQuery.of(context).size.width > 600;
     }
     final statusBarHeight = MediaQuery.of(context).padding.top;
