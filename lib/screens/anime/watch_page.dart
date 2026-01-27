@@ -141,7 +141,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
     super.initState();
     final settings = Get.find<Settings>();
     bool isTV = Get.find<Settings>().isTV.value;
-    if (isTV) {
+    if (settings.isTV.value) {
       final isMobile = false;
       final isDesktop = true;
     } else {
