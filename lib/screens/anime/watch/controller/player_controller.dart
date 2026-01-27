@@ -524,17 +524,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     debugPrint('=== Applying TV fallback configuration ===');
     
     // Alternative Configuration ohne GPU
-    player.setProperty('vo', 'mediacodec_embed');
-    player.setProperty('hwdec', 'mediacodec');
-    player.setProperty('gpu-context', 'android');
-    
-    // Force software rendering fallback
-    player.setProperty('vo', 'mediacodec_embed');
-    player.setProperty('hwdec', 'no');
-    
-    // Seek to current position to restart
-    final currentPos = player.state.position;
-    player.seek(currentPos);
+    _retryWithAlternativeStream();
   }
   
   void _retryWithAlternativeStream() {
