@@ -58,7 +58,7 @@ class _HomePageState extends State<HomePage> {
     final serviceHandler = Get.find<ServiceHandler>();
     bool isTV = Get.find<Settings>().isTV.value;
     if (isTV) {
-      final isDesktop = false
+      final isDesktop = false; //python dev moment
     } else {
       final isDesktop = MediaQuery.of(context).size.width > 600;
     }
