@@ -6,6 +6,7 @@ import 'package:anymex/screens/settings/sub_settings/settings_extensions.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_player.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_theme.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_ui.dart';
+import 'package:anymex/screens/settings/experimental_features.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/logger.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
@@ -111,6 +112,15 @@ class _SettingsPageState extends State<SettingsPage> {
                   title: "Share Logs",
                   description: "Share Logs of the App",
                   onTap: () async => await Logger.share(),
+                ),
+                const SizedBox(height: 10),
+                CustomTile(
+                  icon: HugeIcons.strokeRoundedInformationCircle,
+                  title: "Developers",
+                  description: "Advanced options and TV layout settings",
+                  onTap: () async {
+                    navigate(() => const const ExperimentalFeaturesPage());
+                  },
                 ),
                 const SizedBox(height: 10),
                 CustomTile(
