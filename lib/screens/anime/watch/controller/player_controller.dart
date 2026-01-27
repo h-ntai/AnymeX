@@ -432,7 +432,6 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
         configuration: const VideoControllerConfiguration(
           androidAttachSurfaceAfterVideoParameters: false, // Wichtig für TV!
           enableHardwareAcceleration: false,               // Deaktiviert für TV
-          enableControls: false,
         ),
       );
       
@@ -525,13 +524,13 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     debugPrint('=== Applying TV fallback configuration ===');
     
     // Alternative Configuration ohne GPU
-    player.setOption('vo', 'mediacodec_embed');
-    player.setOption('hwdec', 'mediacodec');
-    player.setOption('gpu-context', 'android');
+    player.setProperty('vo', 'mediacodec_embed');
+    player.setProperty('hwdec', 'mediacodec');
+    player.setProperty('gpu-context', 'android');
     
     // Force software rendering fallback
-    player.setOption('vo', 'mediacodec_embed');
-    player.setOption('hwdec', 'no');
+    player.setProperty('vo', 'mediacodec_embed');
+    player.setProperty('hwdec', 'no');
     
     // Seek to current position to restart
     final currentPos = player.state.position;
