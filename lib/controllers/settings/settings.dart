@@ -24,7 +24,8 @@ class Settings extends GetxController {
   late Rx<PlayerSettings> playerSettings;
   late Box preferences;
   final canShowUpdate = true.obs;
-  RxBool isTV = false.obs;
+  final RxBool isTV = false.obs;
+  final RxBool forceDesktopLayout = false.obs;
   final _selectedShader = ''.obs;
   final _selectedProfile = 'MID-END'.obs;
   final mpvPath = ''.obs;
