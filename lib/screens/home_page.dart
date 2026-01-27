@@ -1,4 +1,4 @@
-// ignore_for_file: invalid_use_of_protected_member, deprecated_member_use
+// lib/screens/home_page.dart (neue version)
 
 import 'package:anymex/widgets/header.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
@@ -18,6 +18,7 @@ import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:anymex/widgets/custom_widgets/custom_textspan.dart';
 import 'package:anymex/widgets/history/tap_history_cards.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
+import 'package:anymex/widgets/helper/responsive_layout.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({
@@ -32,6 +33,7 @@ class _HomePageState extends State<HomePage> {
   late ScrollController _scrollController;
   final ValueNotifier<bool> _isAppBarVisibleExternally =
       ValueNotifier<bool>(true);
+      int _selectedNavIndex = 0;
 
   @override
   void initState() {
@@ -51,22 +53,29 @@ class _HomePageState extends State<HomePage> {
     _isAppBarVisibleExternally.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
+    return ResponsiveBuilder(
+      builder: (context, isDesktop) {
+        if (isDesktop) {
+          return _buildDesktopLayout();
+        }
+        return _buildMobileLayout();
+      },
+    );
+  }
+  Widget _buildMobileLayout() {
     final cacheController = Get.find<CacheController>();
     final serviceHandler = Get.find<ServiceHandler>();
     final isDesktop = MediaQuery.of(context).size.width > 600;
     final statusBarHeight = MediaQuery.of(context).padding.top;
     const appBarHeight = kToolbarHeight + 20;
     final double bottomNavBarHeight = MediaQuery.of(context).padding.bottom;
-
-    bool isMobile =
-        getResponsiveValue(context, desktopValue: false, mobileValue: true);
-
-    final TextAlign textAlignment =
-        isMobile ? TextAlign.center : TextAlign.left;
-
+  
+    bool isMobile = getResponsiveValue(context, desktopValue: false, mobileValue: true);
+    final TextAlign textAlignment = isMobile ? TextAlign.center : TextAlign.left;
+  
+    // Der gesamte bestehende RefreshIndicator + Scaffold Code kommt hierher
     return RefreshIndicator(
       onRefresh: () {
         if (!serviceHandler.isLoggedIn.value) {
@@ -224,6 +233,67 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+  Widget _buildDesktopLayout() {
+    final serviceHandler = Get.find<ServiceHandler>();
+    
+    return Scaffold(
+      body: Row(
+        children: [
+          // Sidebar Navigation (macOS-Style)
+          NavigationRail(
+            selectedIndex: _selectedNavIndex,
+            onDestinationSelected: (index) {
+              setState(() => _selectedNavIndex = index);
+              // TODO: Navigation implementieren
+            },
+            labelType: NavigationRailLabelType.all,
+            leading: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: CircleAvatar(
+                radius: 24,
+                child: Obx(() => Text(
+                  serviceHandler.isLoggedIn.value
+                      ? serviceHandler.profileData.value.name[0].toUpperCase()
+                      : 'G',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                )),
+              ),
+            ),
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: Text('Home'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.search),
+                selectedIcon: Icon(Icons.search),
+                label: Text('Search'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.video_library_outlined),
+                selectedIcon: Icon(Icons.video_library),
+                label: Text('Library'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: Text('Settings'),
+              ),
+            ],
+          ),
+          
+          const VerticalDivider(thickness: 1, width: 1),
+          
+          // Main Content Area - Reuse mobile layout
+          Expanded(
+            child: _buildMobileLayout(),
+          ),
+        ],
+      ),
+    );
+  }
+  
 }
 
 class ImageButton extends StatelessWidget {
