@@ -143,7 +143,6 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
     bool isTV = Get.find<Settings>().isTV.value;
     final isDesktop = isTV ? true : MediaQuery.of(context).size.width > 600;
     final isMobile = isTV ? false : !isDesktop;
-    }
     mediaService = widget.anilistData.serviceType;
     
     if (settings.isTV.value) {
