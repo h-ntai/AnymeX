@@ -58,9 +58,8 @@ class _HomePageState extends State<HomePage> {
     final serviceHandler = Get.find<ServiceHandler>();
     bool isTV = Get.find<Settings>().isTV.value;
     if (isTV) {
-      final isDesktop = True
-      }
-    else {
+      final isDesktop = false
+    } else {
       final isDesktop = MediaQuery.of(context).size.width > 600;
     }
     final statusBarHeight = MediaQuery.of(context).padding.top;
