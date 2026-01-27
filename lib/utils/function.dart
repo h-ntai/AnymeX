@@ -12,6 +12,7 @@ import 'package:anymex/models/models_convertor/carousel/carousel_data.dart';
 import 'package:anymex/models/models_convertor/carousel_mapper.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
@@ -493,11 +494,16 @@ int getResponsiveCrossAxisVal(double screenWidth, {int itemWidth = 150}) {
 }
 
 Future<bool> isTv() async {
-  if (!Platform.isAndroid) return false;
-  DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-  AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-  bool isTV = androidInfo.systemFeatures.contains('android.software.leanback');
-  return isTV;
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    try {
+      const platform = MethodChannel('app.anymex/platform');
+      final result = await platform.invokeMethod<bool>('isTV');
+      return result ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+  return false;
 }
 
 void navigate(dynamic page) {
