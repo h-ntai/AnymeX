@@ -1,32 +1,44 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PlatformUtils {
   static const String _forceDesktopLayoutKey = 'force_desktop_layout';
+  static const MethodChannel _platformChannel = MethodChannel('app.anymex/platform');
+  
   static bool? _isTV;
   static bool? _forceDesktopLayout;
 
-  // TV Detection
   static Future<bool> isAndroidTV() async {
+    if (_isTV != null) return _isTV!;
+    
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      _isTV ??= await _checkTVMode();
-      return _isTV!;
+      try {
+        final result = await _platformChannel.invokeMethod<bool>('isTV');
+        _isTV = result ?? false;
+        return _isTV!;
+      } catch (e) {
+        print('Error checking TV mode: $e');
+        _isTV = false;
+        return false;
+      }
     }
     return false;
   }
 
-  static Future<bool> _checkTVMode() async {
-    try {
-      // Check UI Mode via platform channel
-      final result = await const MethodChannel('app.anymex/platform')
-          .invokeMethod<String>('getUIMode');
-      return result?.contains('television') ?? false;
-    } catch (_) {
-      return false;
+  static Future<String> getUIMode() async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        final result = await _platformChannel.invokeMethod<String>('getUIMode');
+        return result ?? 'normal';
+      } catch (e) {
+        print('Error getting UI mode: $e');
+        return 'normal';
+      }
     }
+    return 'normal';
   }
 
-  // Desktop Layout Toggle
   static Future<bool> shouldUseDesktopLayout() async {
     final prefs = await SharedPreferences.getInstance();
     _forceDesktopLayout = prefs.getBool(_forceDesktopLayoutKey);
@@ -45,10 +57,18 @@ class PlatformUtils {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_forceDesktopLayoutKey, value);
     _forceDesktopLayout = value;
+    _isTV = null;
   }
 
   static Future<bool> getForceDesktopLayout() async {
+    if (_forceDesktopLayout != null) return _forceDesktopLayout!;
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_forceDesktopLayoutKey) ?? false;
+    _forceDesktopLayout = prefs.getBool(_forceDesktopLayoutKey) ?? false;
+    return _forceDesktopLayout!;
+  }
+
+  static void resetCache() {
+    _isTV = null;
+    _forceDesktopLayout = null;
   }
 }
