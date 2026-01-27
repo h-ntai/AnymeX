@@ -133,6 +133,8 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   final currentVisualProfile = 'natural'.obs;
   RxMap<String, int> customSettings = <String, int>{}.obs;
 
+  bool get isMobile => !settings.isTV.value && (Platform.isAndroid || Platform.isIOS);
+
   void applySavedProfile() => ColorProfileManager()
       .applyColorProfile(currentVisualProfile.value, player);
 
