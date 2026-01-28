@@ -46,6 +46,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'package:anymex/utils/aniskip.dart' as aniskip;
+import 'package:anymex/utils/tv_scroll_mixin.dart';
 
 class WatchPage extends StatefulWidget {
   final model.Video episodeSrc;
@@ -67,7 +68,7 @@ class WatchPage extends StatefulWidget {
   State<WatchPage> createState() => _WatchPageState();
 }
 
-class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
+class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TVScrollMixin {
   late Rx<model.Video> episode;
   late Rx<Episode> currentEpisode;
   late RxList<model.Video> episodeTracks;
@@ -141,6 +142,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    initTVScroll();
     final settings = Get.find<Settings>();
     bool isTV = Get.find<Settings>().isTV.value;
     final isDesktop = isTV ? true : MediaQuery.of(context).size.width > 600;
@@ -728,6 +730,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin {
     _hideControlsTimer?.cancel();
     doubleTapTimeout?.cancel();
     _positionSubscription?.cancel();
+    disposeTVScroll();
 
     trackEpisode(
         currentPosition.value, episodeDuration.value, currentEpisode.value,
