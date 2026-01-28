@@ -33,8 +33,6 @@ class _HomePageState extends State<HomePage> {
   final ValueNotifier<bool> _isAppBarVisibleExternally =
       ValueNotifier<bool>(true);
 
-  FocusNode? _scrollFocusNode;
-
   @override
   void initState() {
     super.initState();
@@ -44,7 +42,6 @@ class _HomePageState extends State<HomePage> {
     });
     _scrollController = ScrollController();
     if (Get.find<Settings>().isTV.value) {
-      _scrollFocusNode = FocusNode();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         FocusManager.instance.addListener(_handleFocusChange);
       });
@@ -66,35 +63,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  KeyEventResult _handleTVScrollKeys(FocusNode node, RawKeyEvent event) {
-    if (event is RawKeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        _scrollController.animateTo(
-          _scrollController.offset + 150,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-        return KeyEventResult.handled;
-      }
-      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        _scrollController.animateTo(
-          _scrollController.offset - 150,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-        return KeyEventResult.handled;
-      }
-    }
-    return KeyEventResult.ignored;
-  }
-
   @override
   void dispose() {
     _scrollController.dispose();
     _isAppBarVisibleExternally.dispose();
     if (Get.find<Settings>().isTV.value) {
       FocusManager.instance.removeListener(_handleFocusChange);
-      _scrollFocusNode?.dispose();
     }
     super.dispose();
   }
@@ -112,7 +86,6 @@ class _HomePageState extends State<HomePage> {
     bool isMobile =
         getResponsiveValue(context, desktopValue: false, mobileValue: true);
 
-
     final TextAlign textAlignment =
         isMobile ? TextAlign.center : TextAlign.left;
 
@@ -129,41 +102,23 @@ class _HomePageState extends State<HomePage> {
         extendBodyBehindAppBar: true,
         body: Stack(
           children: [
-            isTV
-                ? Focus(
-                    focusNode: _scrollFocusNode,
-                    skipTraversal: true,
-                    onKey: _handleTVScrollKeys,
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      physics: const BouncingScrollPhysics(), // Lösung 3 (optional)
-                      child: _buildScrollContent(
-                        context,
-                        cacheController,
-                        serviceHandler,
-                        isDesktop,
-                        isMobile,
-                        textAlignment,
-                        statusBarHeight,
-                        appBarHeight,
-                        bottomNavBarHeight,
-                      ),
-                    ),
-                  )
-                : SingleChildScrollView(
-                    controller: _scrollController,
-                    child: _buildScrollContent(
-                      context,
-                      cacheController,
-                      serviceHandler,
-                      isDesktop,
-                      isMobile,
-                      textAlignment,
-                      statusBarHeight,
-                      appBarHeight,
-                      bottomNavBarHeight,
-                    ),
-                  ),
+            SingleChildScrollView(
+              controller: _scrollController,
+              physics: isTV 
+                  ? const BouncingScrollPhysics() 
+                  : const AlwaysScrollableScrollPhysics(),
+              child: _buildScrollContent(
+                context,
+                cacheController,
+                serviceHandler,
+                isDesktop,
+                isMobile,
+                textAlignment,
+                statusBarHeight,
+                appBarHeight,
+                bottomNavBarHeight,
+              ),
+            ),
             if (!isDesktop)
               CustomAnimatedAppBar(
                 isVisible: _isAppBarVisibleExternally,
