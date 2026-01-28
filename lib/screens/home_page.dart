@@ -18,6 +18,7 @@ import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:anymex/widgets/custom_widgets/custom_textspan.dart';
 import 'package:anymex/widgets/history/tap_history_cards.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
+import 'package:anymex/utils/tv_scroll_mixin.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({
@@ -41,35 +42,17 @@ class _HomePageState extends State<HomePage> {
       Get.find<Settings>().showWelcomeDialog(context);
     });
     _scrollController = ScrollController();
-    if (Get.find<Settings>().isTV.value) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        FocusManager.instance.addListener(_handleFocusChange);
-      });
-    }
+    initTVScroll();
   }
 
   ScrollController get scrollController => _scrollController;
 
-  void _handleFocusChange() {
-    if (!mounted) return;
-    final focusedContext = FocusManager.instance.primaryFocus?.context;
-    if (focusedContext != null) {
-      Scrollable.ensureVisible(
-        focusedContext,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-      );
-    }
-  }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _isAppBarVisibleExternally.dispose();
-    if (Get.find<Settings>().isTV.value) {
-      FocusManager.instance.removeListener(_handleFocusChange);
-    }
+    disposeTVScroll();
     super.dispose();
   }
 
@@ -104,9 +87,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             SingleChildScrollView(
               controller: _scrollController,
-              physics: isTV 
-                  ? const BouncingScrollPhysics() 
-                  : const AlwaysScrollableScrollPhysics(),
+              physics: getTVScrollPhysics(),
               child: _buildScrollContent(
                 context,
                 cacheController,
