@@ -71,7 +71,7 @@ class _AnimeHomePageState extends State<AnimeHomePage> with TVScrollMixin {
         children: [
           SingleChildScrollView(
             controller: _scrollController,
-            physics: getTVScrollPhysics()
+            physics: getTVScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
