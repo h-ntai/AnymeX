@@ -33,6 +33,8 @@ class _HomePageState extends State<HomePage> {
   final ValueNotifier<bool> _isAppBarVisibleExternally =
       ValueNotifier<bool>(true);
 
+  FocusNode? _scrollFocusNode;
+
   @override
   void initState() {
     super.initState();
@@ -41,14 +43,59 @@ class _HomePageState extends State<HomePage> {
       Get.find<Settings>().showWelcomeDialog(context);
     });
     _scrollController = ScrollController();
+    if (Get.find<Settings>().isTV.value) {
+      _scrollFocusNode = FocusNode();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        FocusManager.instance.addListener(_handleFocusChange);
+      });
+    }
   }
 
   ScrollController get scrollController => _scrollController;
+
+  void _handleFocusChange() {
+    if (!mounted) return;
+    final focusedContext = FocusManager.instance.primaryFocus?.context;
+    if (focusedContext != null) {
+      Scrollable.ensureVisible(
+        focusedContext,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+    }
+  }
+
+  KeyEventResult _handleTVScrollKeys(FocusNode node, RawKeyEvent event) {
+    if (event is RawKeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        _scrollController.animateTo(
+          _scrollController.offset + 150,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        _scrollController.animateTo(
+          _scrollController.offset - 150,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+        return KeyEventResult.handled;
+      }
+    }
+    return KeyEventResult.ignored;
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _isAppBarVisibleExternally.dispose();
+    if (Get.find<Settings>().isTV.value) {
+      FocusManager.instance.removeListener(_handleFocusChange);
+      _scrollFocusNode?.dispose();
+    }
     super.dispose();
   }
 
@@ -82,120 +129,41 @@ class _HomePageState extends State<HomePage> {
         extendBodyBehindAppBar: true,
         body: Stack(
           children: [
-            SingleChildScrollView(
-              controller: _scrollController,
-              child: Column(
-                crossAxisAlignment: isMobile
-                    ? CrossAxisAlignment.center
-                    : CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    height: isDesktop ? 10 : statusBarHeight + appBarHeight,
-                  ),
-                  const SizedBox(height: 10),
-                  Obx(
-                    () => Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                      child: AnymexTextSpans(
-                        fontSize: 27,
-                        spans: [
-                          const AnymexTextSpan(
-                              text: 'Hey ',
-                              size: 30,
-                              variant: TextVariant.bold),
-                          AnymexTextSpan(
-                              text:
-                                  '${serviceHandler.isLoggedIn.value ? serviceHandler.profileData.value.name : 'Guest'}',
-                              size: 30,
-                              color: Theme.of(context).colorScheme.primary,
-                              variant: TextVariant.bold),
-                          const AnymexTextSpan(
-                              text: ', what are we doing today?',
-                              size: 30,
-                              variant: TextVariant.bold),
-                        ],
-                        textAlign: textAlignment,
+            isTV
+                ? Focus(
+                    focusNode: _scrollFocusNode,
+                    skipTraversal: true,
+                    onKey: _handleTVScrollKeys,
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      physics: const BouncingScrollPhysics(), // Lösung 3 (optional)
+                      child: _buildScrollContent(
+                        context,
+                        cacheController,
+                        serviceHandler,
+                        isDesktop,
+                        isMobile,
+                        textAlignment,
+                        statusBarHeight,
+                        appBarHeight,
+                        bottomNavBarHeight,
                       ),
                     ),
+                  )
+                : SingleChildScrollView(
+                    controller: _scrollController,
+                    child: _buildScrollContent(
+                      context,
+                      cacheController,
+                      serviceHandler,
+                      isDesktop,
+                      isMobile,
+                      textAlignment,
+                      statusBarHeight,
+                      appBarHeight,
+                      bottomNavBarHeight,
+                    ),
                   ),
-                  Column(
-                    crossAxisAlignment: isMobile
-                        ? CrossAxisAlignment.center
-                        : CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 10),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Text(
-                          'Find your favourite anime or manga, manhwa or whatever you like!',
-                          style: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .inverseSurface
-                                .withOpacity(0.8),
-                          ),
-                          textAlign: textAlignment,
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                      Obx(() {
-                        final children = List<Widget>.from(
-                            serviceHandler.homeWidgets(context));
-                        final data = cacheController.getStoredAnime();
-                        if (data.isNotEmpty && children.length > 2) {
-                          children.insert(
-                            2,
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: SizedBox(
-                                height: 100,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount:
-                                      cacheController.getStoredAnime().length,
-                                  itemBuilder: (context, i) {
-                                    final media =
-                                        cacheController.getStoredAnime()[i];
-                                    return RecentlyOpenedAnimeCard(
-                                        media: media);
-                                  },
-                                ),
-                              ),
-                            ),
-                          );
-                        } else if (data.isNotEmpty) {
-                          children.insert(
-                            0,
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: SizedBox(
-                                height: 100,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount:
-                                      cacheController.getStoredAnime().length,
-                                  itemBuilder: (context, i) {
-                                    final media =
-                                        cacheController.getStoredAnime()[i];
-                                    return RecentlyOpenedAnimeCard(
-                                        media: media);
-                                  },
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                        return Column(children: children);
-                      }),
-                    ],
-                  ),
-                  if (!isDesktop)
-                    SizedBox(height: bottomNavBarHeight)
-                  else
-                    const SizedBox(height: 50),
-                ],
-              ),
-            ),
             if (!isDesktop)
               CustomAnimatedAppBar(
                 isVisible: _isAppBarVisibleExternally,
@@ -224,6 +192,130 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    );
+  }
+  
+  Widget _buildScrollContent(
+    BuildContext context,
+    CacheController cacheController,
+    ServiceHandler serviceHandler,
+    bool isDesktop,
+    bool isMobile,
+    TextAlign textAlignment,
+    double statusBarHeight,
+    double appBarHeight,
+    double bottomNavBarHeight,
+  ) {
+    return Column(
+      crossAxisAlignment: isMobile
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: isDesktop ? 10 : statusBarHeight + appBarHeight,
+        ),
+        const SizedBox(height: 10),
+        Obx(
+          () => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: AnymexTextSpans(
+              fontSize: 27,
+              spans: [
+                const AnymexTextSpan(
+                    text: 'Hey ',
+                    size: 30,
+                    variant: TextVariant.bold),
+                AnymexTextSpan(
+                    text:
+                        '${serviceHandler.isLoggedIn.value ? serviceHandler.profileData.value.name : 'Guest'}',
+                    size: 30,
+                    color: Theme.of(context).colorScheme.primary,
+                    variant: TextVariant.bold),
+                const AnymexTextSpan(
+                    text: ', what are we doing today?',
+                    size: 30,
+                    variant: TextVariant.bold),
+              ],
+              textAlign: textAlignment,
+            ),
+          ),
+        ),
+        Column(
+          crossAxisAlignment: isMobile
+              ? CrossAxisAlignment.center
+              : CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                'Find your favourite anime or manga, manhwa or whatever you like!',
+                style: TextStyle(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .inverseSurface
+                      .withOpacity(0.8),
+                ),
+                textAlign: textAlignment,
+              ),
+            ),
+            const SizedBox(height: 30),
+            Obx(() {
+              final children = List<Widget>.from(
+                  serviceHandler.homeWidgets(context));
+              final data = cacheController.getStoredAnime();
+              if (data.isNotEmpty && children.length > 2) {
+                children.insert(
+                  2,
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: SizedBox(
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount:
+                            cacheController.getStoredAnime().length,
+                        itemBuilder: (context, i) {
+                          final media =
+                              cacheController.getStoredAnime()[i];
+                          return RecentlyOpenedAnimeCard(
+                              media: media);
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              } else if (data.isNotEmpty) {
+                children.insert(
+                  0,
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: SizedBox(
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount:
+                            cacheController.getStoredAnime().length,
+                        itemBuilder: (context, i) {
+                          final media =
+                              cacheController.getStoredAnime()[i];
+                          return RecentlyOpenedAnimeCard(
+                              media: media);
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return Column(children: children);
+            }),
+          ],
+        ),
+        if (!isDesktop)
+          SizedBox(height: bottomNavBarHeight)
+        else
+          const SizedBox(height: 50),
+      ],
     );
   }
 }
