@@ -4,6 +4,7 @@ import 'package:anymex/widgets/header.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:anymex/utils/tv_scroll_mixin.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
@@ -28,7 +29,7 @@ class MangaHomePage extends StatefulWidget {
   State<MangaHomePage> createState() => _MangaHomePageState();
 }
 
-class _MangaHomePageState extends State<MangaHomePage> {
+class _MangaHomePageState extends State<MangaHomePage> with TVScrollMixin {
   late ScrollController _scrollController;
   final ValueNotifier<bool> _isAppBarVisibleExternally =
       ValueNotifier<bool>(true);
@@ -41,36 +42,17 @@ class _MangaHomePageState extends State<MangaHomePage> {
       Get.find<Settings>().showWelcomeDialog(context);
     });
     _scrollController = ScrollController();
-    
-    if (Get.find<Settings>().isTV.value) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        FocusManager.instance.addListener(_handleFocusChange);
-      });
+    initTVScroll();
     }
 
   ScrollController get scrollController => _scrollController;
-
-  void _handleFocusChange() {
-    if (!mounted) return;
-    final focusedContext = FocusManager.instance.primaryFocus?.context;
-    if (focusedContext != null) {
-      Scrollable.ensureVisible(
-        focusedContext,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-      );
-    }
-  }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _isAppBarVisibleExternally.dispose();
     
-    if (Get.find<Settings>().isTV.value) {
-      FocusManager.instance.removeListener(_handleFocusChange);
-    }
+    disposeTVScroll();
     super.dispose();
   }
 
@@ -89,9 +71,7 @@ class _MangaHomePageState extends State<MangaHomePage> {
         children: [
           SingleChildScrollView(
             controller: _scrollController,
-            physics: isTV 
-                ? const BouncingScrollPhysics() 
-                : const AlwaysScrollableScrollPhysics(),
+            physics: getTVScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
