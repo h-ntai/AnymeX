@@ -53,7 +53,6 @@ class AnymexOnTap extends StatelessWidget {
           ),
         },
         onShowFocusHighlight: (focused) {
-          // Provide haptic feedback on TV when focused
           if (focused) {
             HapticFeedback.selectionClick();
           }
@@ -157,7 +156,6 @@ class AnymexOnTapAdv extends StatelessWidget {
       },
       child: Focus(
         onKeyEvent: (node, event) {
-          // Handle Enter and Space keys
           if (event is KeyDownEvent) {
             if (event.logicalKey == LogicalKeyboardKey.enter ||
                 event.logicalKey == LogicalKeyboardKey.space ||
@@ -185,7 +183,7 @@ class AnymexOnTapAdv extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   color: isFocused
-                      ? (bgColor ?? Theme.of(context).colorScheme.secondaryContainer)
+                      ? Theme.of(context).colorScheme.secondaryContainer
                       : Colors.transparent,
                   border: Border.all(
                     color: isFocused
