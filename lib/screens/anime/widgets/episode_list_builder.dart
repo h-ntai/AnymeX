@@ -27,7 +27,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:super_sliver_list/super_sliver_list.dart';
 
 class EpisodeListBuilder extends StatefulWidget {
   const EpisodeListBuilder({
@@ -162,6 +161,8 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
   Widget _buildContinueButton() {
     return Focus(
       focusNode: _continueButtonFocus,
+      canRequestFocus: false, // Don't auto-request focus
+      skipTraversal: false, // Allow focus traversal
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
           if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
@@ -201,6 +202,8 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
         ),
         Focus(
           focusNode: _chunkSelectorFocus,
+          canRequestFocus: false, // Don't auto-request focus
+          skipTraversal: false, // Allow focus traversal
           onKeyEvent: (node, event) {
             if (event is KeyDownEvent) {
               if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
@@ -238,7 +241,7 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
           return GridView.builder(
             padding: const EdgeInsets.only(top: 15),
             shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+            physics: const ClampingScrollPhysics(), // Changed from NeverScrollableScrollPhysics
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: getResponsiveCrossAxisCount(
                 context,
@@ -266,6 +269,8 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
 
               return Focus(
                 focusNode: _episodeFocusNodes[index],
+                canRequestFocus: false, // Don't auto-request focus
+                skipTraversal: false, // Allow focus traversal
                 onFocusChange: (hasFocus) {
                   if (hasFocus) {
                     _lastFocusedEpisodeIndex = index;
@@ -650,95 +655,86 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.6,
       ),
-      child: SuperListView(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            alignment: Alignment.center,
-            child: const AnymexText(
-              text: "Choose Server",
-              size: 18,
-              variant: TextVariant.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ...streamList.map((e) {
-            return InkWell(
-              onTap: () async {
-                Get.back();
-                if (General.shouldAskForTrack.get(true) == false) {
-                  navigate(() => settingsController.preferences
-                          .get('useOldPlayer', defaultValue: false)
-                      ? WatchPage(
-                          episodeSrc: e,
-                          episodeList: widget.episodeList,
-                          anilistData: widget.anilistData!,
-                          currentEpisode: selectedEpisode.value,
-                          episodeTracks: streamList,
-                          shouldTrack: true,
-                        )
-                      : WatchScreen(
-                          episodeSrc: e,
-                          episodeList: widget.episodeList,
-                          anilistData: widget.anilistData!,
-                          currentEpisode: selectedEpisode.value,
-                          episodeTracks: streamList,
-                        ));
-                  return;
-                }
-                final shouldTrack = await showTrackingDialog(context);
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: streamList.length,
+        itemBuilder: (context, index) {
+          final e = streamList[index];
+          return InkWell(
+            onTap: () async {
+              Get.back();
+              if (General.shouldAskForTrack.get(true) == false) {
+                navigate(() => settingsController.preferences
+                        .get('useOldPlayer', defaultValue: false)
+                    ? WatchPage(
+                        episodeSrc: e,
+                        episodeList: widget.episodeList,
+                        anilistData: widget.anilistData!,
+                        currentEpisode: selectedEpisode.value,
+                        episodeTracks: streamList,
+                        shouldTrack: true,
+                      )
+                    : WatchScreen(
+                        episodeSrc: e,
+                        episodeList: widget.episodeList,
+                        anilistData: widget.anilistData!,
+                        currentEpisode: selectedEpisode.value,
+                        episodeTracks: streamList,
+                      ));
+                return;
+              }
+              final shouldTrack = await showTrackingDialog(context);
 
-                if (shouldTrack != null) {
-                  navigate(() => settingsController.preferences
-                          .get('useOldPlayer', defaultValue: false)
-                      ? WatchPage(
-                          episodeSrc: e,
-                          episodeList: widget.episodeList,
-                          anilistData: widget.anilistData!,
-                          currentEpisode: selectedEpisode.value,
-                          episodeTracks: streamList,
-                          shouldTrack: shouldTrack,
-                        )
-                      : WatchScreen(
-                          episodeSrc: e,
-                          episodeList: widget.episodeList,
-                          anilistData: widget.anilistData!,
-                          currentEpisode: selectedEpisode.value,
-                          episodeTracks: streamList,
-                          shouldTrack: shouldTrack,
-                        ));
-                }
-              },
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 3.0, horizontal: 10),
-                child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 2.5, horizontal: 10),
-                  title: AnymexText(
-                    text: e.quality.toUpperCase(),
-                    variant: TextVariant.bold,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  tileColor: Theme.of(context)
-                      .colorScheme
-                      .secondaryContainer
-                      .withOpacity(0.4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  trailing: const Icon(Iconsax.play5),
-                  subtitle: AnymexText(
-                    text: sourceController.activeSource.value!.name!
-                        .toUpperCase(),
-                    variant: TextVariant.semiBold,
-                  ),
+              if (shouldTrack != null) {
+                navigate(() => settingsController.preferences
+                        .get('useOldPlayer', defaultValue: false)
+                    ? WatchPage(
+                        episodeSrc: e,
+                        episodeList: widget.episodeList,
+                        anilistData: widget.anilistData!,
+                        currentEpisode: selectedEpisode.value,
+                        episodeTracks: streamList,
+                        shouldTrack: shouldTrack,
+                      )
+                    : WatchScreen(
+                        episodeSrc: e,
+                        episodeList: widget.episodeList,
+                        anilistData: widget.anilistData!,
+                        currentEpisode: selectedEpisode.value,
+                        episodeTracks: streamList,
+                        shouldTrack: shouldTrack,
+                      ));
+              }
+            },
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 3.0, horizontal: 10),
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 2.5, horizontal: 10),
+                title: AnymexText(
+                  text: e.quality.toUpperCase(),
+                  variant: TextVariant.bold,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                tileColor: Theme.of(context)
+                    .colorScheme
+                    .secondaryContainer
+                    .withOpacity(0.4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                trailing: const Icon(Iconsax.play5),
+                subtitle: AnymexText(
+                  text: sourceController.activeSource.value!.name!
+                      .toUpperCase(),
+                  variant: TextVariant.semiBold,
                 ),
               ),
-            );
-          }),
-        ],
+            ),
+          );
+        },
       ),
     );
   }
