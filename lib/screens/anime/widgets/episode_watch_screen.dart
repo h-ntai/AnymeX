@@ -2,6 +2,7 @@
 import 'dart:ui';
 import 'package:anymex/models/Offline/Hive/video.dart';
 import 'package:anymex/controllers/services/anilist/anilist_auth.dart';
+import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/controllers/source/source_controller.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/models/Offline/Hive/episode.dart';
@@ -87,6 +88,8 @@ class _EpisodeWatchScreenState extends State<EpisodeWatchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = Get.find<Settings>();
+    
     return Obx(() {
       _computeChunkedEpisodes(); // Only recompute if needed
 
@@ -135,7 +138,9 @@ class _EpisodeWatchScreenState extends State<EpisodeWatchScreen> {
               // 3. LAZY LOADING: Use ListView.builder instead of GridView with shrinkWrap
               Expanded(
                 child: ListView.builder(
-                  padding: EdgeInsets.symmetric(/*...*/),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: getResponsiveSize(context,
+                          mobileSize: 20, desktopSize: 10)),
                   itemCount: selectedEpisodes.length,
                   physics: settings.isTV.value 
                       ? const BouncingScrollPhysics()
@@ -166,6 +171,7 @@ class _EpisodeWatchScreenState extends State<EpisodeWatchScreen> {
   Widget _buildEpisodeItem(Episode episode, BuildContext context) {
     final settings = Get.find<Settings>();
     final isSelected = widget.currentEpisode.number == episode.number;
+    final watchedEpisode = episode.number.toInt() <= (_cachedUserProgress ?? 0);
     
     return RepaintBoundary(
       child: Focus(
@@ -179,7 +185,7 @@ class _EpisodeWatchScreenState extends State<EpisodeWatchScreen> {
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 200),
             opacity: watchedEpisode ? 0.5 : 1.0,
-            child: settings.isTV.value && _cachedIsAnify == true
+            child: _cachedIsAnify == true
                 ? _buildAnifyEpisode(isSelected, context, episode)
                 : _buildNormalEpisode(isSelected, context, episode),
           ),
