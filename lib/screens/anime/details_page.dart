@@ -37,6 +37,7 @@ import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
 import 'package:expandable_page_view/expandable_page_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_progress.dart';
 import 'package:get/get.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -94,6 +95,11 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
 
   String posterColor = '';
 
+  // TV scroll support
+  final FocusNode _statusButtonFocus = FocusNode();
+  final FocusNode _libraryButtonFocus = FocusNode();
+  final GlobalKey _episodeSectionKey = GlobalKey();
+
   void _onPageSelected(int index) {
     selectedPage.value = index;
     controller.animateToPage(index,
@@ -128,6 +134,8 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
   @override
   void dispose() {
     controller.dispose();
+    _statusButtonFocus.dispose();
+    _libraryButtonFocus.dispose();
     DiscordRPCController.instance.updateBrowsingPresence();
     super.dispose();
   }
@@ -398,106 +406,148 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
               child: Column(
                 children: [
                   Obx(() {
-                    return Row(
-                      children: [
-                        if (widget.media.serviceType !=
-                                ServicesType.extensions &&
-                            widget.media.serviceType.onlineService.isLoggedIn
-                                .value) ...[
-                          Expanded(
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .outline
-                                      .withOpacity(0.2),
-                                ),
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainer
-                                    .withOpacity(0.5),
-                              ),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () {
-                                    if (widget.media.serviceType.onlineService
-                                        .isLoggedIn.value) {
-                                      showListEditorModal(context);
-                                    } else {
-                                      snackBar("You aren't logged in Genius.",
-                                          duration: 1000);
+                    return Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                            // Try to focus on episode section
+                            final episodeSectionState = _episodeSectionKey.currentState;
+                            if (episodeSectionState != null) {
+                              // Request focus on first episode through the episode section
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                FocusScope.of(context).requestFocus();
+                              });
+                            }
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Row(
+                        children: [
+                          if (widget.media.serviceType !=
+                                  ServicesType.extensions &&
+                              widget.media.serviceType.onlineService.isLoggedIn
+                                  .value) ...[
+                            Expanded(
+                              child: Focus(
+                                focusNode: _statusButtonFocus,
+                                onKeyEvent: (node, event) {
+                                  if (event is KeyDownEvent) {
+                                    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                                      _libraryButtonFocus.requestFocus();
+                                      return KeyEventResult.handled;
                                     }
-                                  },
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      AnymexText(
-                                        text: convertAniListStatus(
-                                            animeStatus.value),
-                                        variant: TextVariant.bold,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
+                                  }
+                                  return KeyEventResult.ignored;
+                                },
+                                child: Container(
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline
+                                          .withOpacity(0.2),
+                                    ),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainer
+                                        .withOpacity(0.5),
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        if (widget.media.serviceType.onlineService
+                                            .isLoggedIn.value) {
+                                          showListEditorModal(context);
+                                        } else {
+                                          snackBar("You aren't logged in Genius.",
+                                              duration: 1000);
+                                        }
+                                      },
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          AnymexText(
+                                            text: convertAniListStatus(
+                                                animeStatus.value),
+                                            variant: TextVariant.bold,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 7),
-                          Container(
-                            height: 50,
-                            width: 60,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outline
-                                    .withOpacity(0.2),
-                              ),
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainer
-                                  .withOpacity(0.5),
-                            ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                  onTap: () {
-                                    showCustomListDialog(
-                                        context,
-                                        anilistData!,
-                                        offlineStorage.animeCustomLists.value,
-                                        ItemType.anime);
-                                  },
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: const Icon(
-                                      HugeIcons.strokeRoundedLibrary)),
-                            ),
-                          ),
-                        ] else ...[
-                          Expanded(
-                            child: AnymexButton2(
-                              onTap: () {
-                                showCustomListDialog(
-                                    context,
-                                    anilistData!,
-                                    offlineStorage.animeCustomLists.value,
-                                    ItemType.anime);
+                            const SizedBox(width: 7),
+                            Focus(
+                              focusNode: _libraryButtonFocus,
+                              onKeyEvent: (node, event) {
+                                if (event is KeyDownEvent) {
+                                  if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                                    _statusButtonFocus.requestFocus();
+                                    return KeyEventResult.handled;
+                                  }
+                                }
+                                return KeyEventResult.ignored;
                               },
-                              label: 'Add to Library',
-                              icon: HugeIcons.strokeRoundedLibrary,
+                              child: Container(
+                                height: 50,
+                                width: 60,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outline
+                                        .withOpacity(0.2),
+                                  ),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainer
+                                      .withOpacity(0.5),
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                      onTap: () {
+                                        showCustomListDialog(
+                                            context,
+                                            anilistData!,
+                                            offlineStorage.animeCustomLists.value,
+                                            ItemType.anime);
+                                      },
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: const Icon(
+                                          HugeIcons.strokeRoundedLibrary)),
+                                ),
+                              ),
                             ),
-                          )
-                        ]
-                      ],
+                          ] else ...[
+                            Expanded(
+                              child: AnymexButton2(
+                                onTap: () {
+                                  showCustomListDialog(
+                                      context,
+                                      anilistData!,
+                                      offlineStorage.animeCustomLists.value,
+                                      ItemType.anime);
+                                },
+                                label: 'Add to Library',
+                                icon: HugeIcons.strokeRoundedLibrary,
+                              ),
+                            )
+                          ]
+                        ],
+                      ),
                     );
                   }),
                   const SizedBox(height: 10),
@@ -621,14 +671,13 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
   Widget _buildEpisodeSection(BuildContext context) {
     return Obx(() {
       return EpisodeSection(
+        key: _episodeSectionKey,
         searchedTitle: searchedTitle,
         anilistData: anilistData ?? widget.media,
         episodeList: (isAnify.value) ? episodeList : rawEpisodes,
         episodeError: episodeError,
         mapToAnilist: _mapToService,
         getDetailsFromSource: _fetchSourceDetails,
-
-        // getSourcePreference: getSourcePreference,
         isAnify: isAnify,
         showAnify: showAnify,
       );
