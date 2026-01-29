@@ -974,29 +974,31 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
               },
               onTap: toggleControls,
               onDoubleTapDown: (e) => _handleDoubleTap(e),
-              onVerticalDragUpdate: (e) async {
-                if (isMobile && settings.enableSwipeControls) {
-                  final screenHeight = MediaQuery.of(context).size.height;
-                  final topBoundary = screenHeight * 0.2;
-                  final bottomBoundary = screenHeight * 0.8;
-
-                  final position = e.localPosition;
-                  if (position.dy >= topBoundary &&
-                      position.dy <= bottomBoundary) {
-                    final delta = e.delta.dy;
-
-                    if (position.dx <= MediaQuery.of(context).size.width / 2) {
-                      final brightness = _brightnessValue - delta / 500;
-                      final result = brightness.clamp(0.0, 1.0);
-                      setBrightness(result.toDouble());
-                    } else {
-                      final volume = _volumeValue - delta / 500;
-                      final result = volume.clamp(0.0, 1.0);
-                      setVolume(result.toDouble());
+              onVerticalDragUpdate: settings.isTV.value 
+                ? null
+                : (e) async {
+                  if (isMobile && settings.enableSwipeControls) {
+                    final screenHeight = MediaQuery.of(context).size.height;
+                    final topBoundary = screenHeight * 0.2;
+                    final bottomBoundary = screenHeight * 0.8;
+  
+                    final position = e.localPosition;
+                    if (position.dy >= topBoundary &&
+                        position.dy <= bottomBoundary) {
+                      final delta = e.delta.dy;
+  
+                      if (position.dx <= MediaQuery.of(context).size.width / 2) {
+                        final brightness = _brightnessValue - delta / 500;
+                        final result = brightness.clamp(0.0, 1.0);
+                        setBrightness(result.toDouble());
+                      } else {
+                        final volume = _volumeValue - delta / 500;
+                        final result = volume.clamp(0.0, 1.0);
+                        setVolume(result.toDouble());
+                      }
                     }
                   }
-                }
-              },
+                },
               child: AnimatedOpacity(
                 curve: Curves.easeInOut,
                 duration: const Duration(milliseconds: 300),
