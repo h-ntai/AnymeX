@@ -40,8 +40,23 @@ class AnymexOnTap extends StatelessWidget {
       return FocusableActionDetector(
         actions: <Type, Action<Intent>>{
           ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (ActivateIntent intent) => onTap?.call(),
+            onInvoke: (ActivateIntent intent) {
+              onTap?.call();
+              return null;
+            },
           ),
+          ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+            onInvoke: (ButtonActivateIntent intent) {
+              onTap?.call();
+              return null;
+            },
+          ),
+        },
+        onShowFocusHighlight: (focused) {
+          // Provide haptic feedback on TV when focused
+          if (focused) {
+            HapticFeedback.selectionClick();
+          }
         },
         child: Builder(
           builder: (BuildContext context) {
@@ -118,47 +133,74 @@ class AnymexOnTapAdv extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      onKeyEvent: (node, event) {
-        if (event.logicalKey == LogicalKeyboardKey.enter &&
-            event.logicalKey == LogicalKeyboardKey.space) {
-          if (onTap != null) {
-            onTap!.call();
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        }
-        return onKeyEvent?.call(node, event) ?? KeyEventResult.ignored;
+    final settings = Get.find<Settings>();
+    
+    return FocusableActionDetector(
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (ActivateIntent intent) {
+            onTap?.call();
+            return null;
+          },
+        ),
+        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+          onInvoke: (ButtonActivateIntent intent) {
+            onTap?.call();
+            return null;
+          },
+        ),
       },
-      child: Builder(
-        builder: (BuildContext context) {
-          final bool isFocused = Focus.of(context).hasFocus;
-          return GestureDetector(
-            onTap: onTap,
-            child: AnimatedContainer(
-              duration: animationDuration,
-              transform: Matrix4.identity()..scale(isFocused ? scale : 1.0),
-              padding:
-                  EdgeInsets.symmetric(vertical: isFocused ? (margin ?? 5) : 0),
-              margin: EdgeInsets.only(left: isFocused ? (margin ?? 5) : 0),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: isFocused
-                    ? Theme.of(context).colorScheme.secondaryContainer
-                    : Colors.transparent,
-                border: Border.all(
-                  color: isFocused
-                      ? (focusedBorderColor ??
-                          Theme.of(context).colorScheme.primary)
-                      : Colors.transparent,
-                  width: borderWidth,
-                  strokeAlign: BorderSide.strokeAlignOutside,
-                ),
-              ),
-              child: child,
-            ),
-          );
+      onShowFocusHighlight: (focused) {
+        if (settings.isTV.value && focused) {
+          HapticFeedback.selectionClick();
+        }
+      },
+      child: Focus(
+        onKeyEvent: (node, event) {
+          // Handle Enter and Space keys
+          if (event is KeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.space ||
+                event.logicalKey == LogicalKeyboardKey.select) {
+              if (onTap != null) {
+                onTap!.call();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            }
+          }
+          return onKeyEvent?.call(node, event) ?? KeyEventResult.ignored;
         },
+        child: Builder(
+          builder: (BuildContext context) {
+            final bool isFocused = Focus.of(context).hasFocus;
+            return GestureDetector(
+              onTap: onTap,
+              child: AnimatedContainer(
+                duration: animationDuration,
+                transform: Matrix4.identity()..scale(isFocused ? scale : 1.0),
+                padding:
+                    EdgeInsets.symmetric(vertical: isFocused ? (margin ?? 5) : 0),
+                margin: EdgeInsets.only(left: isFocused ? (margin ?? 5) : 0),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: isFocused
+                      ? (bgColor ?? Theme.of(context).colorScheme.secondaryContainer)
+                      : Colors.transparent,
+                  border: Border.all(
+                    color: isFocused
+                        ? (focusedBorderColor ??
+                            Theme.of(context).colorScheme.primary)
+                        : Colors.transparent,
+                    width: borderWidth,
+                    strokeAlign: BorderSide.strokeAlignOutside,
+                  ),
+                ),
+                child: child,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
