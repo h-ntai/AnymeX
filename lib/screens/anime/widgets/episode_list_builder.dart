@@ -23,6 +23,7 @@ import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:dartotsu_extension_bridge/dartotsu_extension_bridge.dart';
 import 'package:expressive_loading_indicator/expressive_loading_indicator.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -56,6 +57,12 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
   final Rx<Episode> savedEpisode = Episode(number: "1").obs;
   List<Episode> offlineEpisodes = [];
 
+  // TV scroll support
+  final Map<int, FocusNode> _episodeFocusNodes = {};
+  final FocusNode _continueButtonFocus = FocusNode();
+  final FocusNode _chunkSelectorFocus = FocusNode();
+  int? _lastFocusedEpisodeIndex;
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +82,44 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
         savedEpisode.value = savedData!.currentEpisode!;
         offlineEpisodes = savedData.episodes ?? [];
         _initEpisodes();
+      }
+    });
+
+    // Initialize focus nodes for episodes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeFocusNodes();
+    });
+  }
+
+  void _initializeFocusNodes() {
+    // Create focus nodes for all visible episodes
+    final chunkedEpisodes = chunkEpisodes(
+        widget.episodeList, calculateChunkSize(widget.episodeList));
+    
+    if (chunkedEpisodes.isNotEmpty) {
+      final selectedEpisodes = chunkedEpisodes[selectedChunkIndex.value];
+      for (int i = 0; i < selectedEpisodes.length; i++) {
+        if (!_episodeFocusNodes.containsKey(i)) {
+          _episodeFocusNodes[i] = FocusNode();
+        }
+      }
+    }
+  }
+
+  void _updateFocusNodesForChunk() {
+    _episodeFocusNodes.forEach((key, node) {
+      node.dispose();
+    });
+    _episodeFocusNodes.clear();
+
+    _initializeFocusNodes();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_lastFocusedEpisodeIndex != null && 
+          _episodeFocusNodes.containsKey(_lastFocusedEpisodeIndex)) {
+        _episodeFocusNodes[_lastFocusedEpisodeIndex]?.requestFocus();
+      } else if (_episodeFocusNodes.isNotEmpty) {
+        _episodeFocusNodes[0]?.requestFocus();
       }
     });
   }
@@ -115,16 +160,28 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
   }
 
   Widget _buildContinueButton() {
-    return ContinueEpisodeButton(
-      height: getResponsiveSize(context, mobileSize: 80, desktopSize: 100),
-      onPressed: () => _handleEpisodeSelection(continueEpisode.value),
-      backgroundImage: continueEpisode.value.thumbnail ??
-          savedEpisode.value.thumbnail ??
-          widget.anilistData!.cover ??
-          widget.anilistData!.poster,
-      episode: continueEpisode.value,
-      progressEpisode: savedEpisode.value,
-      data: widget.anilistData!,
+    return Focus(
+      focusNode: _continueButtonFocus,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+            _chunkSelectorFocus.requestFocus();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: ContinueEpisodeButton(
+        height: getResponsiveSize(context, mobileSize: 80, desktopSize: 100),
+        onPressed: () => _handleEpisodeSelection(continueEpisode.value),
+        backgroundImage: continueEpisode.value.thumbnail ??
+            savedEpisode.value.thumbnail ??
+            widget.anilistData!.cover ??
+            widget.anilistData!.poster,
+        episode: continueEpisode.value,
+        progressEpisode: savedEpisode.value,
+        data: widget.anilistData!,
+      ),
     );
   }
 
@@ -142,15 +199,41 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
           padding: const EdgeInsets.symmetric(vertical: 10.0),
           child: Obx(_buildContinueButton),
         ),
-        EpisodeChunkSelector(
-          chunks: chunkedEpisodes,
-          selectedChunkIndex: selectedChunkIndex,
-          onChunkSelected: (index) => setState(() {}),
+        Focus(
+          focusNode: _chunkSelectorFocus,
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent) {
+              if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                if (_episodeFocusNodes.isNotEmpty) {
+                  _episodeFocusNodes[0]?.requestFocus();
+                }
+                return KeyEventResult.handled;
+              } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                _continueButtonFocus.requestFocus();
+                return KeyEventResult.handled;
+              }
+            }
+            return KeyEventResult.ignored;
+          },
+          child: EpisodeChunkSelector(
+            chunks: chunkedEpisodes,
+            selectedChunkIndex: selectedChunkIndex,
+            onChunkSelected: (index) {
+              setState(() {
+                _updateFocusNodesForChunk();
+              });
+            },
+          ),
         ),
         Obx(() {
           final selectedEpisodes = chunkedEpisodes.isNotEmpty
               ? chunkedEpisodes[selectedChunkIndex.value]
               : [];
+
+          // Ensure we have focus nodes for all episodes
+          if (_episodeFocusNodes.length != selectedEpisodes.length) {
+            _initializeFocusNodes();
+          }
 
           return GridView.builder(
             padding: const EdgeInsets.only(top: 15),
@@ -176,33 +259,89 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
             itemCount: selectedEpisodes.length,
             itemBuilder: (context, index) {
               final episode = selectedEpisodes[index] as Episode;
-              return Obx(() {
-                final currentEpisode =
-                    episode.number.toInt() + 1 == userProgress.value;
-                final completedEpisode =
-                    episode.number.toInt() <= userProgress.value;
-                final isSelected =
-                    selectedEpisode.value.number == episode.number;
+              
+              if (!_episodeFocusNodes.containsKey(index)) {
+                _episodeFocusNodes[index] = FocusNode();
+              }
 
-                return Opacity(
-                  opacity: completedEpisode
-                      ? 0.5
-                      : currentEpisode
-                          ? 0.8
-                          : 1,
-                  child: BetterEpisode(
-                    episode: episode,
-                    isSelected: isSelected,
-                    layoutType: isAnify.value
-                        ? EpisodeLayoutType.detailed
-                        : EpisodeLayoutType.compact,
-                    fallbackImageUrl:
-                        episode.thumbnail ?? widget.anilistData!.poster,
-                    offlineEpisodes: offlineEpisodes,
-                    onTap: () => _handleEpisodeSelection(episode),
-                  ),
-                );
-              });
+              return Focus(
+                focusNode: _episodeFocusNodes[index],
+                onFocusChange: (hasFocus) {
+                  if (hasFocus) {
+                    _lastFocusedEpisodeIndex = index;
+                  }
+                },
+                onKeyEvent: (node, event) {
+                  if (event is KeyDownEvent) {
+                    final crossAxisCount = getResponsiveCrossAxisCount(
+                      context,
+                      baseColumns: 1,
+                      maxColumns: 3,
+                      mobileItemWidth: 400,
+                      tabletItemWidth: 400,
+                      desktopItemWidth: 200,
+                    );
+
+                    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                      final newIndex = index - crossAxisCount;
+                      if (newIndex >= 0 && _episodeFocusNodes.containsKey(newIndex)) {
+                        _episodeFocusNodes[newIndex]?.requestFocus();
+                        return KeyEventResult.handled;
+                      } else if (newIndex < 0) {
+                        _chunkSelectorFocus.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                    } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                      final newIndex = index + crossAxisCount;
+                      if (newIndex < selectedEpisodes.length && 
+                          _episodeFocusNodes.containsKey(newIndex)) {
+                        _episodeFocusNodes[newIndex]?.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.handled;
+                    } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                      if (index > 0 && _episodeFocusNodes.containsKey(index - 1)) {
+                        _episodeFocusNodes[index - 1]?.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                    } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                      if (index < selectedEpisodes.length - 1 && 
+                          _episodeFocusNodes.containsKey(index + 1)) {
+                        _episodeFocusNodes[index + 1]?.requestFocus();
+                        return KeyEventResult.handled;
+                      }
+                    }
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: Obx(() {
+                  final currentEpisode =
+                      episode.number.toInt() + 1 == userProgress.value;
+                  final completedEpisode =
+                      episode.number.toInt() <= userProgress.value;
+                  final isSelected =
+                      selectedEpisode.value.number == episode.number;
+
+                  return Opacity(
+                    opacity: completedEpisode
+                        ? 0.5
+                        : currentEpisode
+                            ? 0.8
+                            : 1,
+                    child: BetterEpisode(
+                      episode: episode,
+                      isSelected: isSelected,
+                      layoutType: isAnify.value
+                          ? EpisodeLayoutType.detailed
+                          : EpisodeLayoutType.compact,
+                      fallbackImageUrl:
+                          episode.thumbnail ?? widget.anilistData!.poster,
+                      offlineEpisodes: offlineEpisodes,
+                      onTap: () => _handleEpisodeSelection(episode),
+                    ),
+                  );
+                }),
+              );
             },
           );
         }),
@@ -445,6 +584,13 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
 
   @override
   void dispose() {
+    _continueButtonFocus.dispose();
+    _chunkSelectorFocus.dispose();
+    _episodeFocusNodes.forEach((key, node) {
+      node.dispose();
+    });
+    _episodeFocusNodes.clear();
+    
     scrapingTimer?.cancel();
     headlessWebView?.dispose();
     super.dispose();
@@ -595,6 +741,10 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
         ],
       ),
     );
+  }
+
+  FocusNode? getFirstEpisodeFocusNode() {
+    return _episodeFocusNodes[0];
   }
 }
 
