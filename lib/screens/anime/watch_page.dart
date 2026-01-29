@@ -1478,13 +1478,19 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                         children: [
                           if (!isLocked.value) ...[
                             BlurWrapper(
-                              child: IconButton(
-                                  onPressed: () {
-                                    Get.back();
-                                  },
-                                  icon: const Icon(
-                                      Icons.arrow_back_ios_new_rounded,
-                                      color: Colors.white)),
+                              child: Focus(
+                                focusNode: FocusNode(
+                                  canRequestFocus: true,
+                                  skipTraversal: false,
+                                ),
+                                child: IconButton(
+                                    onPressed: () {
+                                      Get.back();
+                                    },
+                                    icon: const Icon(
+                                        Icons.arrow_back_ios_new_rounded,
+                                        color: Colors.white)),
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Container(
@@ -1519,59 +1525,77 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 if (!isLocked.value) ...[
-                                  _buildIcon(
-                                      onTap: () {
-                                        isEpisodeDialogOpen.value =
-                                            !isEpisodeDialogOpen.value;
-                                        if (MediaQuery.of(context)
-                                                .orientation ==
-                                            Orientation.portrait) {
-                                          isEpisodeDialogOpen.value = false;
-                                          showModalBottomSheet(
-                                              context: context,
-                                              shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          20)),
-                                              clipBehavior: Clip.antiAlias,
-                                              builder: (context) {
-                                                return EpisodeWatchScreen(
-                                                  episodeList:
-                                                      episodeList.value,
-                                                  anilistData:
-                                                      anilistData.value,
-                                                  currentEpisode:
-                                                      currentEpisode.value,
-                                                  onEpisodeSelected: (src,
-                                                      streamList,
-                                                      selectedEpisode) {
-                                                    episode.value = src;
-                                                    episodeTracks.value =
-                                                        streamList;
-                                                    currentEpisode.value =
-                                                        selectedEpisode;
-                                                    _initPlayer(false);
-                                                    isEpisodeDialogOpen.value =
-                                                        false;
-                                                  },
-                                                );
-                                              });
-                                        }
-                                      },
-                                      icon: HugeIcons.strokeRoundedFolder03),
-                                  _buildIcon(
-                                      onTap: () {
-                                        showPlaybackSpeedDialog(context);
-                                      },
-                                      icon: HugeIcons.strokeRoundedClock01),
+                                  Focus(
+                                    focusNode: FocusNode(
+                                      canRequestFocus: true,
+                                      skipTraversal: false,
+                                    ),
+                                    child: _buildIcon(
+                                        onTap: () {
+                                          isEpisodeDialogOpen.value =
+                                              !isEpisodeDialogOpen.value;
+                                          if (MediaQuery.of(context)
+                                                  .orientation ==
+                                              Orientation.portrait) {
+                                            isEpisodeDialogOpen.value = false;
+                                            showModalBottomSheet(
+                                                context: context,
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            20)),
+                                                clipBehavior: Clip.antiAlias,
+                                                builder: (context) {
+                                                  return EpisodeWatchScreen(
+                                                    episodeList:
+                                                        episodeList.value,
+                                                    anilistData:
+                                                        anilistData.value,
+                                                    currentEpisode:
+                                                        currentEpisode.value,
+                                                    onEpisodeSelected: (src,
+                                                        streamList,
+                                                        selectedEpisode) {
+                                                      episode.value = src;
+                                                      episodeTracks.value =
+                                                          streamList;
+                                                      currentEpisode.value =
+                                                          selectedEpisode;
+                                                      _initPlayer(false);
+                                                      isEpisodeDialogOpen.value =
+                                                          false;
+                                                    },
+                                                  );
+                                                });
+                                          }
+                                        },
+                                        icon: HugeIcons.strokeRoundedFolder03),
+                                  ),
+                                  Focus(
+                                    focusNode: FocusNode(
+                                      canRequestFocus: true,
+                                      skipTraversal: false,
+                                    ),
+                                    child: _buildIcon(
+                                        onTap: () {
+                                          showPlaybackSpeedDialog(context);
+                                        },
+                                        icon: HugeIcons.strokeRoundedClock01),
+                                  ),
                                 ],
-                                _buildIcon(
-                                    onTap: () {
-                                      isLocked.value = !isLocked.value;
-                                    },
-                                    icon: isLocked.value
-                                        ? Icons.lock
-                                        : Icons.lock_open),
+                                Focus(
+                                  focusNode: FocusNode(
+                                    canRequestFocus: true,
+                                    skipTraversal: false,
+                                  ),
+                                  child: _buildIcon(
+                                      onTap: () {
+                                        isLocked.value = !isLocked.value;
+                                      },
+                                      icon: isLocked.value
+                                          ? Icons.lock
+                                          : Icons.lock_open),
+                                ),
                               ],
                             ),
                           ),
@@ -1670,32 +1694,56 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                                 BlurWrapper(
                                   child: Row(
                                     children: [
-                                      _buildIcon(
-                                          onTap: () {
-                                            playerSettingsSheet(context);
-                                          },
-                                          icon: HugeIcons
-                                              .strokeRoundedSettings01),
-                                      _buildIcon(
-                                          onTap: () {
-                                            showTrackSelector();
-                                          },
-                                          icon: HugeIcons
-                                              .strokeRoundedFolderVideo),
-                                      _buildIcon(
-                                          onTap: () {
-                                            showSubtitleSelector();
-                                          },
-                                          icon:
-                                              HugeIcons.strokeRoundedSubtitle),
-                                      if (episode.value.audios != null &&
-                                          episode.value.audios!.isNotEmpty)
-                                        _buildIcon(
+                                      Focus(
+                                        focusNode: FocusNode(
+                                          canRequestFocus: true,
+                                          skipTraversal: false,
+                                        ),
+                                        child: _buildIcon(
                                             onTap: () {
-                                              showAudioSelector();
+                                              playerSettingsSheet(context);
                                             },
                                             icon: HugeIcons
-                                                .strokeRoundedMusicNote01),
+                                                .strokeRoundedSettings01),
+                                      ),
+                                      Focus(
+                                        focusNode: FocusNode(
+                                          canRequestFocus: true,
+                                          skipTraversal: false,
+                                        ),
+                                        child: _buildIcon(
+                                            onTap: () {
+                                              showTrackSelector();
+                                            },
+                                            icon: HugeIcons
+                                                .strokeRoundedFolderVideo),
+                                      ),
+                                      Focus(
+                                        focusNode: FocusNode(
+                                          canRequestFocus: true,
+                                          skipTraversal: false,
+                                        ),
+                                        child: _buildIcon(
+                                            onTap: () {
+                                              showSubtitleSelector();
+                                            },
+                                            icon:
+                                                HugeIcons.strokeRoundedSubtitle),
+                                      ),
+                                      if (episode.value.audios != null &&
+                                          episode.value.audios!.isNotEmpty)
+                                        Focus(
+                                          focusNode: FocusNode(
+                                            canRequestFocus: true,
+                                            skipTraversal: false,
+                                          ),
+                                          child: _buildIcon(
+                                              onTap: () {
+                                                showAudioSelector();
+                                              },
+                                              icon: HugeIcons
+                                                  .strokeRoundedMusicNote01),
+                                        ),
                                     ],
                                   ),
                                 ),
@@ -1704,63 +1752,93 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                                     children: [
                                       if (Platform.isAndroid ||
                                           Platform.isIOS) ...[
-                                        _buildIcon(
-                                            onTap: () async {
-                                              SystemChrome
-                                                  .setPreferredOrientations([
-                                                DeviceOrientation.portraitUp,
-                                              ]);
-                                            },
-                                            icon: Icons.phone_android),
-                                        _buildIcon(
-                                            onTap: () async {
-                                              leftOriented.value =
-                                                  !leftOriented.value;
-                                              if (!leftOriented.value) {
+                                        Focus(
+                                          focusNode: FocusNode(
+                                            canRequestFocus: true,
+                                            skipTraversal: false,
+                                          ),
+                                          child: _buildIcon(
+                                              onTap: () async {
                                                 SystemChrome
                                                     .setPreferredOrientations([
-                                                  DeviceOrientation
-                                                      .landscapeLeft,
+                                                  DeviceOrientation.portraitUp,
                                                 ]);
-                                              } else {
-                                                SystemChrome
-                                                    .setPreferredOrientations([
-                                                  DeviceOrientation
-                                                      .landscapeRight,
-                                                ]);
-                                              }
-                                            },
-                                            icon: Icons.screen_rotation),
+                                              },
+                                              icon: Icons.phone_android),
+                                        ),
+                                        Focus(
+                                          focusNode: FocusNode(
+                                            canRequestFocus: true,
+                                            skipTraversal: false,
+                                          ),
+                                          child: _buildIcon(
+                                              onTap: () async {
+                                                leftOriented.value =
+                                                    !leftOriented.value;
+                                                if (!leftOriented.value) {
+                                                  SystemChrome
+                                                      .setPreferredOrientations([
+                                                    DeviceOrientation
+                                                        .landscapeLeft,
+                                                  ]);
+                                                } else {
+                                                  SystemChrome
+                                                      .setPreferredOrientations([
+                                                    DeviceOrientation
+                                                        .landscapeRight,
+                                                  ]);
+                                                }
+                                              },
+                                              icon: Icons.screen_rotation),
+                                        ),
                                       ],
-                                      _buildIcon(
-                                          onTap: () =>
-                                              showColorProfileSheet(context),
-                                          icon: Icons.hdr_on_rounded),
-                                      _buildIcon(
-                                          onTap: () {
-                                            final newIndex =
-                                                (resizeModeList.indexOf(
-                                                            resizeMode.value) +
-                                                        1) %
-                                                    resizeModeList.length;
-                                            resizeMode.value =
-                                                resizeModeList[newIndex];
-                                          },
-                                          icon: Icons.aspect_ratio_rounded),
+                                      Focus(
+                                        focusNode: FocusNode(
+                                          canRequestFocus: true,
+                                          skipTraversal: false,
+                                        ),
+                                        child: _buildIcon(
+                                            onTap: () =>
+                                                showColorProfileSheet(context),
+                                            icon: Icons.hdr_on_rounded),
+                                      ),
+                                      Focus(
+                                        focusNode: FocusNode(
+                                          canRequestFocus: true,
+                                          skipTraversal: false,
+                                        ),
+                                        child: _buildIcon(
+                                            onTap: () {
+                                              final newIndex =
+                                                  (resizeModeList.indexOf(
+                                                              resizeMode.value) +
+                                                          1) %
+                                                      resizeModeList.length;
+                                              resizeMode.value =
+                                                  resizeModeList[newIndex];
+                                            },
+                                            icon: Icons.aspect_ratio_rounded),
+                                      ),
                                       if (!Platform.isAndroid &&
                                           !Platform.isIOS)
-                                        _buildIcon(
-                                            onTap: () async {
-                                              isFullscreen.value =
-                                                  !isFullscreen.value;
-                                              await AnymexTitleBar
-                                                  .setFullScreen(
-                                                      isFullscreen.value);
-                                            },
-                                            icon: !isFullscreen.value
-                                                ? Icons.fullscreen
-                                                : Icons
-                                                    .fullscreen_exit_rounded),
+                                        Focus(
+                                          focusNode: FocusNode(
+                                            canRequestFocus: true,
+                                            skipTraversal: false,
+                                          ),
+                                          child: _buildIcon(
+                                              onTap: () async {
+                                                isFullscreen.value =
+                                                    !isFullscreen.value;
+                                                await AnymexTitleBar
+                                                    .setFullScreen(
+                                                        isFullscreen.value);
+                                              },
+                                              icon: !isFullscreen.value
+                                                  ? Icons.fullscreen
+                                                  : Icons
+                                                      .fullscreen_exit_rounded),
+                                        ),
                                     ],
                                   ),
                                 ),
@@ -2105,11 +2183,10 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
   }
   
   Widget _buildTVVideoWidget() {
-    // Für Android TV: Einfacherer Fallback oder alternative Implementierung
     return Video(
       controller: playerController,
       controls: null,
-      fit: BoxFit.contain, // Auf TV verwenden wir contain statt cover
+      fit: BoxFit.contain,
       subtitleViewConfiguration: const SubtitleViewConfiguration(
         visible: false,
       ),
