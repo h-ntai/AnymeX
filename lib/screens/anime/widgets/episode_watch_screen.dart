@@ -135,15 +135,22 @@ class _EpisodeWatchScreenState extends State<EpisodeWatchScreen> {
               // 3. LAZY LOADING: Use ListView.builder instead of GridView with shrinkWrap
               Expanded(
                 child: ListView.builder(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: getResponsiveSize(context,
-                          mobileSize: 20, desktopSize: 10)),
+                  padding: EdgeInsets.symmetric(/*...*/),
                   itemCount: selectedEpisodes.length,
+                  physics: settings.isTV.value 
+                      ? const BouncingScrollPhysics()
+                      : const AlwaysScrollableScrollPhysics(),
                   itemBuilder: (context, index) {
                     final episode = selectedEpisodes[index];
+                    final isCurrentEpisode = widget.currentEpisode.number == episode.number;
+                    
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _buildEpisodeItem(episode, context),
+                      child: Focus(
+                        // Auto-focus current episode when opening on TV
+                        autofocus: settings.isTV.value && isCurrentEpisode && index == 0,
+                        child: _buildEpisodeItem(episode, context),
+                      ),
                     );
                   },
                 ),
@@ -157,19 +164,25 @@ class _EpisodeWatchScreenState extends State<EpisodeWatchScreen> {
 
   // 4. EXTRACT AND OPTIMIZE EPISODE ITEM BUILDING
   Widget _buildEpisodeItem(Episode episode, BuildContext context) {
+    final settings = Get.find<Settings>();
     final isSelected = widget.currentEpisode.number == episode.number;
-    final watchedEpisode = episode.number.toInt() <= (_cachedUserProgress ?? 0);
-
+    
     return RepaintBoundary(
-      // Prevents unnecessary repaints
-      child: AnymexOnTap(
-        onTap: () => _handleEpisodeTap(episode, isSelected),
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 200),
-          opacity: watchedEpisode ? 0.5 : 1.0,
-          child: _cachedIsAnify == true
-              ? _buildAnifyEpisode(isSelected, context, episode)
-              : _buildNormalEpisode(isSelected, context, episode),
+      child: Focus(
+        focusNode: isSelected && settings.isTV.value 
+            ? FocusNode(canRequestFocus: true)..requestFocus()
+            : null,
+        skipTraversal: false,
+        canRequestFocus: true,
+        child: AnymexOnTap(
+          onTap: () => _handleEpisodeTap(episode, isSelected),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: watchedEpisode ? 0.5 : 1.0,
+            child: settings.isTV.value && _cachedIsAnify == true
+                ? _buildAnifyEpisode(isSelected, context, episode)
+                : _buildNormalEpisode(isSelected, context, episode),
+          ),
         ),
       ),
     );
@@ -187,12 +200,45 @@ class _EpisodeWatchScreenState extends State<EpisodeWatchScreen> {
   }
 
   Future<void> _fetchServers(Episode ep) async {
+    final settings = Get.find<Settings>();
+    
+    if (settings.isTV.value) {
+      try {
+        final videos = await sourceController.activeSource.value!.methods
+            .getVideoList(d.DEpisode(episodeNumber: ep.number, url: ep.link)) as List<Video>?;
+        
+        if (videos == null || videos.isEmpty) {
+          Get.snackbar(
+            'Error',
+            'No streams available',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+          return;
+        }
+        
+        streamList.value = videos;
+        
+        final preferredQuality = widget.currentEpisode.currentTrack?.quality;
+        final preferredStream = videos.firstWhere(
+          (e) => e.quality == preferredQuality,
+          orElse: () => videos[0], // Fallback to first available
+        );
+        
+        widget.onEpisodeSelected(preferredStream, videos, ep);
+      } catch (e) {
+        Get.snackbar(
+          'Error',
+          e.toString(),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+      return;
+    }
+    
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
         return SizedBox(
@@ -201,8 +247,6 @@ class _EpisodeWatchScreenState extends State<EpisodeWatchScreen> {
             future: sourceController.activeSource.value!.methods.getVideoList(
                     d.DEpisode(episodeNumber: ep.number, url: ep.link))
                 as Future<List<Video>>?,
-            // future: getVideo(
-            // source: sourceController.activeSource.value!, url: url),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return _buildScrapingLoadingState(true);
