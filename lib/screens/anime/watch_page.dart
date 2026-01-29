@@ -99,6 +99,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
   final RxString resizeMode = "Cover".obs;
   late PlayerSettings playerSettings;
   late FocusNode _keyboardListenerFocusNode;
+  late FocusNode _overlayFocusNode; // NEW: Focus node for overlay
   aniskip.EpisodeSkipTimes? skipTimes;
   final isOPSkippedOnce = false.obs;
   final isEDSkippedOnce = false.obs;
@@ -191,8 +192,12 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
       canRequestFocus: !settings.isTV.value,
       skipTraversal: settings.isTV.value,
     );
+    _overlayFocusNode = FocusNode(
+      canRequestFocus: true,
+      skipTraversal: false,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_keyboardListenerFocusNode.hasFocus) {
+      if (mounted && !_keyboardListenerFocusNode.hasFocus && !settings.isTV.value) {
         _keyboardListenerFocusNode.requestFocus();
       }
     });
@@ -296,8 +301,8 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
       if (settings.isTV.value) {
         playerController = VideoController(player,
             configuration: const VideoControllerConfiguration(
-              androidAttachSurfaceAfterVideoParameters: false, // Changed for TV
-              enableHardwareAcceleration: false, // Disable for TV
+              androidAttachSurfaceAfterVideoParameters: false,
+              enableHardwareAcceleration: false,
             ));
       } else {
         playerController = VideoController(player,
@@ -629,18 +634,15 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
         ? (currentSeconds - skipDuration.value).clamp(0, maxSeconds)
         : (currentSeconds + skipDuration.value).clamp(0, maxSeconds);
 
-    // Batch UI updates
     formattedTime.value = formatDuration(Duration(seconds: newSeekPosition));
     player.seek(Duration(seconds: newSeekPosition));
 
-    // Optimize animations
     if (isLeft) {
       _leftAnimationController.forward(from: 0);
     } else {
       _rightAnimationController.forward(from: 0);
     }
 
-    // Reset after delay
     doubleTapTimeout?.cancel();
     doubleTapTimeout = Timer(const Duration(milliseconds: 800), () {
       _leftAnimationController.reset();
@@ -751,6 +753,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
       }
     }
     _keyboardListenerFocusNode.dispose();
+    _overlayFocusNode.dispose();
     super.dispose();
   }
 
@@ -860,7 +863,6 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
 
   Obx _buildPlayer(BuildContext context) {
     return Obx(() {
-      // Android TV-spezifische Behandlung
       if (settings.isTV.value) {
         return _buildTVPlayer(context);
       }
@@ -929,21 +931,33 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                       mobileSize: 0.4, desktopSize: 0.3, isStrict: true)
               : 0,
           child: KeyboardListener(
-            focusNode: FocusNode(
-                skipTraversal: showControls.value,
-                canRequestFocus: !showControls.value,
-                descendantsAreFocusable: false,
-                descendantsAreTraversable: false),
-            autofocus: !showControls.value,
+            focusNode: _overlayFocusNode,
+            autofocus: settings.isTV.value && !showControls.value,
             onKeyEvent: (e) {
-              if (settings.isTV.value) {
+              if (settings.isTV.value && e is KeyDownEvent) {
+                // TV D-Pad Handling
                 if (!showControls.value) {
+                  // Wenn Menü versteckt: OK-Taste (Select) zeigt Menü an
                   if (e.logicalKey == LogicalKeyboardKey.select ||
-                      e.logicalKey == LogicalKeyboardKey.arrowLeft ||
-                      e.logicalKey == LogicalKeyboardKey.arrowRight ||
-                      e.logicalKey == LogicalKeyboardKey.arrowUp ||
+                      e.logicalKey == LogicalKeyboardKey.enter) {
+                    toggleControls(val: true);
+                    return;
+                  }
+                  
+                  // Links/Rechts für Skip - NUR wenn Menü versteckt ist!
+                  if (e.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                    _skipSegments(true);
+                    return;
+                  } else if (e.logicalKey == LogicalKeyboardKey.arrowRight) {
+                    _skipSegments(false);
+                    return;
+                  }
+                  
+                  // Alle anderen Tasten zeigen auch das Menü an
+                  if (e.logicalKey == LogicalKeyboardKey.arrowUp ||
                       e.logicalKey == LogicalKeyboardKey.arrowDown) {
                     toggleControls(val: true);
+                    return;
                   }
                 }
               }
@@ -1349,7 +1363,6 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // "None" option
                     AnymexOnTap(
                       onTap: () {
                         selectedSubIndex.value = -1;
@@ -1359,7 +1372,6 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                       child: subtitleTile("None", Iconsax.subtitle5,
                           selectedSubIndex.value == -1),
                     ),
-                    // Existing subtitles
                     ...subtitles.asMap().entries.map((entry) {
                       final index = entry.key;
                       final e = entry.value;
@@ -1373,7 +1385,6 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                             Iconsax.subtitle5, selectedSubIndex.value == index),
                       );
                     }),
-                    // "Add Subtitle" option
                     AnymexOnTap(
                       onTap: () async {
                         final result = await FilePicker.platform.pickFiles(
@@ -1433,7 +1444,6 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
     );
   }
 
-  // Helper Methods
   Color _getFgColor() {
     return settings.playerStyle == 0
         ? Colors.white
@@ -1467,7 +1477,6 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                   children: [
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
-                      // curve: Curves.,
                       transform: Matrix4.identity()
                         ..translate(0.0, showControls.value ? 0.0 : -100.0),
                       padding: EdgeInsets.symmetric(
@@ -1988,7 +1997,6 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
     );
   }
 
-  // Helper Methods
   Color _getPlayFgColor() {
     return settings.playerStyle == 0
         ? Colors.white
