@@ -80,6 +80,13 @@ class _EpisodeSectionState extends State<EpisodeSection> {
     }
   }
 
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   Future<List<Episode>> _fetchEpisodes(int requestId) async {
     try {
       await widget.mapToAnilist();
