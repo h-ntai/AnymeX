@@ -174,21 +174,14 @@ class _EpisodeWatchScreenState extends State<EpisodeWatchScreen> {
     final watchedEpisode = episode.number.toInt() <= (_cachedUserProgress ?? 0);
     
     return RepaintBoundary(
-      child: Focus(
-        focusNode: isSelected && settings.isTV.value 
-            ? FocusNode(canRequestFocus: true)..requestFocus()
-            : null,
-        skipTraversal: false,
-        canRequestFocus: true,
-        child: AnymexOnTap(
-          onTap: () => _handleEpisodeTap(episode, isSelected),
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: watchedEpisode ? 0.5 : 1.0,
-            child: _cachedIsAnify == true
-                ? _buildAnifyEpisode(isSelected, context, episode)
-                : _buildNormalEpisode(isSelected, context, episode),
-          ),
+      child: AnymexOnTap(
+        onTap: () => _handleEpisodeTap(episode, isSelected),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: watchedEpisode ? 0.5 : 1.0,
+          child: _cachedIsAnify == true
+              ? _buildAnifyEpisode(isSelected, context, episode)
+              : _buildNormalEpisode(isSelected, context, episode),
         ),
       ),
     );
