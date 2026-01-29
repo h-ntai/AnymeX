@@ -56,12 +56,27 @@ class _EpisodeSectionState extends State<EpisodeSection> {
   final RxInt _requestCounter = 0.obs;
   final Rx<Future<List<Episode>>?> _episodeFuture =
       Rx<Future<List<Episode>>?>(null);
+  late ScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
     if (widget.episodeList != null && widget.episodeList!.isNotEmpty) {
       _episodeFuture.value = Future.value(widget.episodeList!);
+    }
+  }
+
+    void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    
+    if (_scrollController.position.pixels >= 
+        _scrollController.position.maxScrollExtent - 100) {
+      if (mounted) {
+        setState(() {
+        });
+      }
     }
   }
 
