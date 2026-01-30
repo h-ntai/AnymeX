@@ -1,0 +1,5 @@
+# .actrc - act Konfiguration
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+--secret-file .secrets
+--env FLUTTER_VERSION=3.32.8
+--container-architecture linux/amd64
