@@ -268,7 +268,7 @@ class ExoticCard extends CarouselCard {
                   ] else ...[
                     Icon(
                       getIconForVariant(
-                          itemData.extraData ?? '', variant, type),
+                          itemData.extraData ?? '', variant,),
                       size: 16,
                       color: Theme.of(context).colorScheme.onPrimary,
                     ),
@@ -414,7 +414,7 @@ class MinimalExoticCard extends CarouselCard {
                               ? itemData.args!
                               : itemData.extraData ?? '',
                           variant,
-                          type),
+                          ),
                       size: 16,
                       color: Theme.of(context).colorScheme.onPrimary,
                     ),
@@ -532,7 +532,7 @@ class BlurCard extends CarouselCard {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  getIconForVariant(itemData.extraData ?? '', variant, type),
+                  getIconForVariant(itemData.extraData ?? '', variant),
                   size: 16,
                   color: theme.colorScheme.primary,
                 ),

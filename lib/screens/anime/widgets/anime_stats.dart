@@ -23,7 +23,6 @@ class AnimeStats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final serviceHandler = Get.find<ServiceHandler>();
-    final isSimkl = false;
     final covers = [
                 ...serviceHandler.anilistService.trendingAnimes,
               ]
@@ -147,7 +146,6 @@ class AnimeStats extends StatelessWidget {
                       ServicesType.anilist) {
                     navigate(() => SearchPage(
                           searchTerm: '',
-                          isManga: false,
                           initialFilters: {
                             'genres': [e]
                           },

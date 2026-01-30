@@ -56,7 +56,7 @@ Widget buildBigCarousel(List<Media> data, bool isManga, {CarouselType? type}) {
   return BigCarousel(
       data: data,
       carouselType:
-          type ?? (isManga ? CarouselType.manga : CarouselType.anime));
+          type ?? (isManga ? CarouselType.anime : CarouselType.anime));
 }
 
 

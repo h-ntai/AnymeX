@@ -354,15 +354,11 @@ class OfflineStorageController extends GetxController {
         popularity: original.popularity,
         format: original.format,
         aired: original.aired,
-        totalChapters: original.totalChapters,
         genres: original.genres,
         studios: original.studios,
-        chapters: chapters,
         episodes: episodes,
         currentEpisode: currentEpisode,
-        currentChapter: currentChapter,
         watchedEpisodes: episodes ?? [],
-        readChapters: chapters ?? [],
         serviceIndex: handler.serviceType.value.index);
   }
 

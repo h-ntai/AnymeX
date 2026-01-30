@@ -90,7 +90,8 @@ String getAniListStatusEquivalent(String status) {
 
 String returnConvertedStatus(String status) {
   switch (status) {
-    case 'watching' || 'reading':
+    case 'watching':
+    case 'reading':
       return 'CURRENT';
     case 'completed':
       return 'COMPLETED';
@@ -98,9 +99,11 @@ String returnConvertedStatus(String status) {
       return 'PAUSED';
     case 'dropped':
       return 'DROPPED';
-    case 'plan_to_watch' || 'plan_to_read':
+    case 'plan_to_watch':
+    case 'plan_to_read':
       return 'PLANNING';
     default:
       return 'ALL';
+    }
   }
 }

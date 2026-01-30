@@ -9,10 +9,12 @@ import 'package:anymex/widgets/custom_widgets/anymex_progress.dart';
 import 'package:get/get.dart';
 
 class WrongTitleModal extends StatefulWidget {
-  const WrongTitleModal(
-      {super.key,
-      required this.initialText,
-      required this.onTap});
+  const WrongTitleModal({
+    super.key,
+    required this.initialText,
+    required this.onTap,
+  });
+  
   final String initialText;
   final Function(DMedia) onTap;
 
@@ -133,10 +135,9 @@ class _WrongTitleModalState extends State<WrongTitleModal> {
             ),
           ],
         ),
-      );
+      ));
     }
   }
-}
 
 Future<void> showWrongTitleModal(
     BuildContext context, String initialText, Function(DMedia) onTap) {

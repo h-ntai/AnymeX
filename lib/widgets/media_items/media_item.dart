@@ -84,11 +84,10 @@ class GridAnimeCard extends StatelessWidget {
   const GridAnimeCard({
     super.key,
     required this.data,
-    required this.isManga,
     this.variant,
   });
   final dynamic data;
-  final bool isManga;
+  final bool isManga = false;
   final CardVariant? variant;
 
   @override

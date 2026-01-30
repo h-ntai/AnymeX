@@ -558,7 +558,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
             ),
           ],
         ),
-      );
+      ),
     );
   }
 
@@ -616,7 +616,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
             ),
           ],
         ),
-      );
+      ),
     );
   }
 
@@ -661,7 +661,7 @@ class _SearchPageState extends State<SearchPage> with TickerProviderStateMixin {
             ),
           ],
         ),
-      );
+      ),
     );
   }
 

@@ -46,7 +46,7 @@ class _RepoBottomSheetState extends State<RepoBottomSheet> {
         : ExtensionType.mangayomi;
 
     repoController = TextEditingController(
-      text: controller.getRepo(type),
+      text: controller.getAnimeRepo(type),
     );
   }
 
@@ -64,7 +64,7 @@ class _RepoBottomSheetState extends State<RepoBottomSheet> {
           ? ExtensionType.aniyomi
           : ExtensionType.mangayomi;
 
-      repoController.text = controller.getRepo(type);
+      repoController.text = controller.getAnimeRepo(type);
     });
   }
 
@@ -75,7 +75,7 @@ class _RepoBottomSheetState extends State<RepoBottomSheet> {
 
     print('${type.name} - ${repoController.text}');
 
-    controller.setRepo(repoController.text, type);
+    controller.setAnimeRepo(repoController.text, type);
 
     Navigator.of(context).pop();
     await widget.onSave();

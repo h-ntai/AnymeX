@@ -437,15 +437,6 @@ class AnilistAuth extends GetxController {
         }),
       );
 
-      if (malId != null) {
-        serviceHandler.malService.updateListEntry(UpdateListEntryParams(
-            listId: malId,
-            score: score,
-            status: status,
-            progress: progress,
-            isAnime: isAnime));
-      }
-
       if (response.statusCode == 200) {
         final newMedia = currentMedia.value
           ..episodeCount = progress.toString()
@@ -529,8 +520,7 @@ class AnilistAuth extends GetxController {
     final number = savedAnime?.currentEpisode?.number.toInt() ?? 0;
     currentMedia.value = animeList.value.firstWhere((el) => el.id == id,
         orElse: () => TrackedMedia(
-            episodeCount: number.toString(),
-            chapterCount: number.toString()));
+            episodeCount: number.toString()));
   }
 
 

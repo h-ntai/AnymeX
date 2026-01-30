@@ -43,9 +43,7 @@ class _GitHubRepoDialogState extends State<GitHubRepoDialog> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
       setState(() {
-        _controller.text = widget.type == ItemType.anime
-            ? sourceController.activeAnimeRepo
-            : sourceController.activeNovelRepo;
+        _controller.text = sourceController.activeAnimeRepo;
       });
     });
   }
