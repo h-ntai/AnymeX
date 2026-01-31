@@ -7,7 +7,6 @@ import 'package:anymex/screens/anime/watch/controls/bottom_controls.dart';
 import 'package:anymex/screens/anime/watch/controls/center_controls.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/double_tap_seek.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/overlay.dart';
-import 'package:anymex/screens/anime/watch/controls/widgets/tv_seek_indicator.dart';
 import 'package:anymex/screens/anime/watch/controls/top_controls.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/episodes_pane.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/subtitle_text.dart';
@@ -15,6 +14,7 @@ import 'package:anymex/screens/anime/watch/subtitles/subtitle_view.dart';
 import 'package:anymex/screens/anime/widgets/media_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/services.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 class WatchScreen extends StatefulWidget {
@@ -71,75 +71,103 @@ class _WatchScreenState extends State<WatchScreen> {
       }
     });
     return Scaffold(
-      body: KeyboardListener(
-        focusNode: _keyboardFocusNode,
+      body: FocusScope(
         autofocus: true,
-        onKeyEvent: (event) {
-          // Handle TV remote input
-          if (controller.settings.isTV.value) {
-            controller.tvRemoteHandler.handleKeyEvent(event);
-          }
-        },
-        child: Stack(
-          children: [
-            Obx(() {
-              return Video(
-                key: const ValueKey('android_tv_video_player'),
-                filterQuality: FilterQuality.medium,
-                controls: null,
-                controller: controller.playerController,
-                fit: controller.videoFit.value,
-                resumeUponEnteringForegroundMode: true,
-                wakelock: true,
-                subtitleViewConfiguration:
-                    const SubtitleViewConfiguration(visible: false),
-              );
-            }),
-            PlayerOverlay(controller: controller),
-            SubtitleText(controller: controller),
-            DoubleTapSeekWidget(
-              controller: controller,
-            ),
-            const Align(
-              alignment: Alignment.center,
-              child: CenterControls(),
-            ),
-            const Align(
-              alignment: Alignment.topCenter,
-              child: TopControls(),
-            ),
-            const Align(
-              alignment: Alignment.bottomCenter,
-              child: BottomControls(),
-            ),
-            MediaIndicatorBuilder(
-              isVolumeIndicator: false,
-              controller: controller,
-            ),
-            MediaIndicatorBuilder(
-              isVolumeIndicator: true,
-              controller: controller,
-            ),
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              left: 0,
-              child: SubtitleSearchBottomSheet(controller: controller),
-            ),
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              left: 0,
-              child: EpisodesPane(controller: controller),
-            ),
-            // TV Seek Indicator - nur auf Android TV anzeigen
-            if (controller.settings.isTV.value)
-              TVSeekIndicator(handler: controller.tvRemoteHandler),
-          ],
+        child: KeyboardListener(
+          focusNode: _keyboardFocusNode,
+          autofocus: true,
+          onKeyEvent: (event) {
+            // Handle TV remote input
+            if (controller.settings.isTV.value) {
+              final handled = controller.tvRemoteHandler.handleKeyEvent(event);
+              if (handled) {
+                return;
+              }
+            }
+
+            if (event is KeyDownEvent) {
+            _handleAdditionalKeys(event);
+            }
+          },
+            child: Stack(
+            children: [
+              Obx(() {
+                return Video(
+                  key: const ValueKey('android_tv_video_player'),
+                  filterQuality: FilterQuality.medium,
+                  controls: null,
+                  controller: controller.playerController,
+                  fit: controller.videoFit.value,
+                  resumeUponEnteringForegroundMode: true,
+                  wakelock: true,
+                  subtitleViewConfiguration:
+                      const SubtitleViewConfiguration(visible: false),
+                );
+              }),
+              PlayerOverlay(controller: controller),
+              SubtitleText(controller: controller),
+              DoubleTapSeekWidget(
+                controller: controller,
+              ),
+              const Align(
+                alignment: Alignment.center,
+                child: CenterControls(),
+              ),
+              const Align(
+                alignment: Alignment.topCenter,
+                child: TopControls(),
+              ),
+              const Align(
+                alignment: Alignment.bottomCenter,
+                child: BottomControls(),
+              ),
+              MediaIndicatorBuilder(
+                isVolumeIndicator: false,
+                controller: controller,
+              ),
+              MediaIndicatorBuilder(
+                isVolumeIndicator: true,
+                controller: controller,
+              ),
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                left: 0,
+                child: SubtitleSearchBottomSheet(controller: controller),
+              ),
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                left: 0,
+                child: EpisodesPane(controller: controller),
+              ),
+              // TV Seek Indicator - nur auf Android TV anzeigen
+            ],
+          ),
         ),
       ),
     );
   }
+
+  void _handleAdditionalKeys(KeyDownEvent event) {
+    final key = event.logicalKey;
+    
+    // Space bar for play/pause
+    if (key == LogicalKeyboardKey.space) {
+      controller.togglePlayPause();
+    }
+    
+    // F for fullscreen
+    if (key == LogicalKeyboardKey.keyF) {
+      controller.toggleFullScreen();
+    }
+    
+    // M for mute
+    if (key == LogicalKeyboardKey.keyM) {
+      controller.toggleMute();
+    }
+  }
+
 }

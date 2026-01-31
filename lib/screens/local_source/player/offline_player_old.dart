@@ -12,7 +12,6 @@ import 'package:anymex/models/player/player_adaptor.dart';
 import 'package:anymex/controllers/settings/methods.dart';
 import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/controllers/source/source_controller.dart';
-import 'package:anymex/screens/anime/watch/controls/widgets/tv_seek_indicator.dart';
 import 'package:anymex/screens/anime/widgets/media_indicator_old.dart';
 import 'package:anymex/screens/anime/widgets/video_slider.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_player.dart';

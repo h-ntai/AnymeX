@@ -8,6 +8,7 @@ class ControlButton extends StatefulWidget {
   final String? tooltip;
   final bool compact;
   final bool isPrimary;
+  final bool showFocus;
 
   const ControlButton({
     super.key,
@@ -16,6 +17,7 @@ class ControlButton extends StatefulWidget {
     this.tooltip,
     this.compact = false,
     this.isPrimary = false,
+    this.showFocus = false,
   });
 
   @override
@@ -70,6 +72,7 @@ class _ControlButtonState extends State<ControlButton>
   Widget build(BuildContext context) {
     final size = widget.compact ? 36.0 : (widget.isPrimary ? 48.0 : 44.0);
     final iconSize = widget.compact ? 20.0 : (widget.isPrimary ? 26.0 : 24.0);
+    final hasFocus = widget.showFocus && Focus.of(context).hasFocus;
 
     Widget button = AnymexOnTap(
       onTapDown: (_) => _handleTapDown(),
@@ -102,30 +105,37 @@ class _ControlButtonState extends State<ControlButton>
                   borderRadius: BorderRadius.circular(
                       widget.compact ? 12 : (widget.isPrimary ? 18 : 16)),
                   border: Border.all(
-                    color: widget.isPrimary
-                        ? (_isHovered
-                            ? context.theme.colorScheme.primary.withOpacity(0.4)
-                            : context.theme.colorScheme.primary
-                                .withOpacity(0.2))
-                        : (_isHovered
-                            ? context.theme.colorScheme.primary.withOpacity(0.3)
-                            : context.theme.colorScheme.outline
-                                .withOpacity(0.1)),
-                    width: _isHovered ? 1.0 : 0.5,
+                    color: hasFocus
+                        ? context.theme.colorScheme.primary // FOKUS-FARBE
+                        : widget.isPrimary
+                            ? (_isHovered
+                                ? context.theme.colorScheme.primary.withOpacity(0.4)
+                                : context.theme.colorScheme.primary.withOpacity(0.2))
+                            : (_isHovered
+                                ? context.theme.colorScheme.primary.withOpacity(0.3)
+                                : context.theme.colorScheme.outline.withOpacity(0.1)),
+                    width: hasFocus ? 2.0 : (_isHovered ? 1.0 : 0.5), // Dickerer Rand bei Fokus
                   ),
-                  boxShadow: _isHovered
+                  boxShadow: hasFocus
                       ? [
                           BoxShadow(
-                            color: widget.isPrimary
-                                ? context.theme.colorScheme.primary
-                                    .withOpacity(0.3)
-                                : context.theme.colorScheme.primary
-                                    .withOpacity(0.2),
-                            blurRadius: widget.isPrimary ? 12 : 8,
+                            color: context.theme.colorScheme.primary.withOpacity(0.3),
+                            blurRadius: widget.isPrimary ? 15 : 12,
+                            spreadRadius: 1.0,
                             offset: const Offset(0, 2),
                           ),
                         ]
-                      : null,
+                      : _isHovered
+                          ? [
+                              BoxShadow(
+                                color: widget.isPrimary
+                                    ? context.theme.colorScheme.primary.withOpacity(0.3)
+                                    : context.theme.colorScheme.primary.withOpacity(0.2),
+                                blurRadius: widget.isPrimary ? 12 : 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
                 ),
                 child: Center(
                   child: AnimatedContainer(
@@ -134,13 +144,10 @@ class _ControlButtonState extends State<ControlButton>
                       widget.icon,
                       size: iconSize,
                       color: enabled
-                          ? (widget.isPrimary
+                          ? (hasFocus || widget.isPrimary || _isHovered
                               ? context.theme.colorScheme.primary
-                              : (_isHovered
-                                  ? context.theme.colorScheme.primary
-                                  : context.theme.colorScheme.onSurface))
-                          : context.theme.colorScheme.onSurface
-                              .withOpacity(0.5),
+                              : context.theme.colorScheme.onSurface)
+                          : context.theme.colorScheme.onSurface.withOpacity(0.5),
                     ),
                   ),
                 ),

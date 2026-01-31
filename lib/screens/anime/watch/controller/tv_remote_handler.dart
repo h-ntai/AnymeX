@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 /// TV Remote D-Pad handler for video playback
-/// Implements menu-state-driven behavior with accumulative long-press seeking
+/// Implements menu-state-driven behavior
 class TVRemoteHandler {
   final Function(Duration) onSeek;
   final Function() onToggleMenu;
@@ -13,6 +13,7 @@ class TVRemoteHandler {
   final Function() getCurrentPosition;
   final Function() getVideoDuration;
   final Function() isMenuVisible;
+  final BuildContext context;
 
   TVRemoteHandler({
     required this.onSeek,
@@ -21,26 +22,16 @@ class TVRemoteHandler {
     required this.getCurrentPosition,
     required this.getVideoDuration,
     required this.isMenuVisible,
+    required this.context
   });
+
 
   // Seek configuration
   static const int shortPressSeekSeconds = 10;
   static const int longPressAccumulationStart = 5;
   static const int longPressAccumulationStep = 5;
 
-  // State tracking
-  Timer? _longPressTimer;
-  int _accumulatedSeekSeconds = 0;
-  bool _isLongPressing = false;
-  SeekDirection _currentDirection = SeekDirection.none;
-
-  // Visual feedback
-  final RxInt seekCounter = 0.obs;
-  final RxBool showSeekIndicator = false.obs;
-  final Rx<SeekDirection> seekDirection = SeekDirection.none.obs;
-
   void dispose() {
-    _cancelLongPress();
   }
 
   /// Main key event handler
@@ -49,32 +40,8 @@ class TVRemoteHandler {
 
     if (event is KeyDownEvent) {
       return _handleKeyDown(event, menuVisible);
-    } else if (event is KeyRepeatEvent) {
-      return _handleKeyRepeat(event, menuVisible);
     } else if (event is KeyUpEvent) {
       return _handleKeyUp(event, menuVisible);
-    }
-
-    return false;
-  }
-
-  bool _handleKeyRepeat(KeyRepeatEvent event, bool menuVisible) {
-    if (menuVisible) return false;
-
-    final key = event.logicalKey;
-
-    if (key == LogicalKeyboardKey.arrowLeft) {
-      if (!_isLongPressing) {
-        _startLongPress(SeekDirection.backward);
-      }
-      return true;
-    }
-
-    if (key == LogicalKeyboardKey.arrowRight) {
-      if (!_isLongPressing) {
-        _startLongPress(SeekDirection.forward);
-      }
-      return true;
     }
 
     return false;
@@ -91,8 +58,25 @@ class TVRemoteHandler {
         onToggleMenu(); // Close menu
         return true;
       }
-      // Let menu handle other keys
-      return false;
+      // Handle arrow keys for navigation when menu is visible
+      if (key == LogicalKeyboardKey.arrowLeft ||
+          key == LogicalKeyboardKey.arrowRight ||
+          key == LogicalKeyboardKey.arrowUp ||
+          key == LogicalKeyboardKey.arrowDown) {
+        // Consume arrow keys for focus navigation
+        _handleFocusNavigation(key);
+        return true;
+      }
+
+      // Handle Enter/Select for activating focused item
+      if (key == LogicalKeyboardKey.select ||
+          key == LogicalKeyboardKey.enter) {
+        // Let Flutter handle activation via FocusManager
+        return false; // Allow default behavior
+      }
+
+      // Consume all other keys when menu is visible
+      return true;
     }
 
     // Menu hidden state - playback controls active
@@ -119,7 +103,8 @@ class TVRemoteHandler {
     }
 
     return false;
-  }
+    }
+
 
   bool _handleKeyUp(KeyUpEvent event, bool menuVisible) {
     final key = event.logicalKey;
@@ -128,7 +113,6 @@ class TVRemoteHandler {
     if (!menuVisible) {
       if (key == LogicalKeyboardKey.arrowLeft ||
           key == LogicalKeyboardKey.arrowRight) {
-        _handleDirectionalRelease();
         return true;
       }
     }
@@ -136,25 +120,38 @@ class TVRemoteHandler {
     return false;
   }
 
+  void _handleFocusNavigation(LogicalKeyboardKey key) {
+    final focusScope = FocusScope.of(context);
+    
+    switch (key) {
+      case LogicalKeyboardKey.arrowLeft:
+        focusScope.focusInDirection(TraversalDirection.left);
+        break;
+      case LogicalKeyboardKey.arrowRight:
+        focusScope.focusInDirection(TraversalDirection.right);
+        break;
+      case LogicalKeyboardKey.arrowUp:
+        focusScope.focusInDirection(TraversalDirection.up);
+        break;
+      case LogicalKeyboardKey.arrowDown:
+        focusScope.focusInDirection(TraversalDirection.down);
+        break;
+      default:
+        break;
+    }
+  }
+
   void _handleLeftKey(KeyDownEvent event) {
-    if (_isLongPressing) return;
 
     _executeShortPress(SeekDirection.backward);
 
-    _longPressTimer = Timer(const Duration(milliseconds: 500), () {
-      _startLongPress(SeekDirection.backward);
-    });
   }
 
 
   void _handleRightKey(KeyDownEvent event) {
-    if (_isLongPressing) return;
 
     _executeShortPress(SeekDirection.forward);
 
-    _longPressTimer = Timer(const Duration(milliseconds: 500), () {
-      _startLongPress(SeekDirection.forward);
-    });
   }
 
 
@@ -174,103 +171,12 @@ class TVRemoteHandler {
 
     onSeek(Duration(seconds: targetPosition));
     
-    // Show brief indicator
-    _showBriefSeekIndicator(direction, shortPressSeekSeconds);
   }
 
-  void _startLongPress(SeekDirection direction) {
-    _isLongPressing = true;
-    _currentDirection = direction;
-    _accumulatedSeekSeconds = longPressAccumulationStart;
 
-    // Show visual feedback
-    showSeekIndicator.value = true;
-    seekDirection.value = direction;
-    seekCounter.value = _accumulatedSeekSeconds;
 
-    // Start accumulation timer
-    _longPressTimer?.cancel();
-    _longPressTimer = Timer.periodic(
-      const Duration(milliseconds: 200),
-      (timer) => _accumulateSeek(direction),
-    );
-  }
 
-  void _accumulateSeek(SeekDirection direction) {
-    final currentPos = getCurrentPosition() as Duration;
-    final duration = getVideoDuration() as Duration;
 
-    // Calculate potential new accumulated value
-    int newAccumulated =
-        _accumulatedSeekSeconds + longPressAccumulationStep;
-
-    // Calculate target position
-    int targetSeconds = direction == SeekDirection.backward
-        ? currentPos.inSeconds - newAccumulated
-        : currentPos.inSeconds + newAccumulated;
-
-    // Check bounds
-    if (targetSeconds < 0 || targetSeconds > duration.inSeconds) {
-      // Hit boundary - stop accumulation
-      _longPressTimer?.cancel();
-      // Keep current accumulated value (don't increment further)
-      return;
-    }
-
-    // Valid increment
-    _accumulatedSeekSeconds = newAccumulated;
-    seekCounter.value = _accumulatedSeekSeconds;
-  }
-
-  void _handleDirectionalRelease() {
-    if (!_isLongPressing) {
-      // Was just a short press, already handled
-      _cancelLongPress();
-      return;
-    }
-
-    // Execute accumulated seek
-    final currentPos = getCurrentPosition() as Duration;
-    final duration = getVideoDuration() as Duration;
-
-    int seekSeconds = _currentDirection == SeekDirection.backward
-        ? -_accumulatedSeekSeconds
-        : _accumulatedSeekSeconds;
-
-    final targetPosition = _clampPosition(
-      currentPos.inSeconds + seekSeconds,
-      duration.inSeconds,
-    );
-
-    onSeek(Duration(seconds: targetPosition));
-
-    // Reset state
-    _cancelLongPress();
-    
-    // Hide indicator after brief delay
-    Future.delayed(const Duration(milliseconds: 500), () {
-      showSeekIndicator.value = false;
-    });
-  }
-
-  void _showBriefSeekIndicator(SeekDirection direction, int seconds) {
-    showSeekIndicator.value = true;
-    seekDirection.value = direction;
-    seekCounter.value = seconds;
-
-    Future.delayed(const Duration(milliseconds: 800), () {
-      showSeekIndicator.value = false;
-    });
-  }
-
-  void _cancelLongPress() {
-    _longPressTimer?.cancel();
-    _longPressTimer = null;
-    _isLongPressing = false;
-    _accumulatedSeekSeconds = 0;
-    _currentDirection = SeekDirection.none;
-    seekCounter.value = 0;
-  }
 
   int _clampPosition(int targetSeconds, int maxSeconds) {
     return targetSeconds.clamp(0, maxSeconds);

@@ -66,6 +66,9 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   final String? offlineVideoPath;
   TVRemoteHandler? _tvRemoteHandler;
   TVRemoteHandler get tvRemoteHandler => _tvRemoteHandler!;
+  final FocusNode pauseFocusNode = FocusNode();
+  final FocusNode prevEpisodeFocusNode = FocusNode();
+  final FocusNode nextEpisodeFocusNode = FocusNode();
 
   PlayerController(model.Video video, Episode episode, this.episodeList,
       this.anilistData, List<model.Video> episodes,
@@ -219,6 +222,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     _initializeSwipeStuffs();
     _initializeControlsAutoHide();
     updateNavigatorState();
+    pauseFocusNode.addListener(() {
+    });
     ever(selectedVideo, (_) {
       final audios = selectedVideo.value?.audios ?? [];
       embeddedAudioTracks.value = audios
@@ -241,7 +246,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       },
       getCurrentPosition: () => currentPosition.value,
       getVideoDuration: () => episodeDuration.value,
-      isMenuVisible: () => showControls.value,
+      isMenuVisible: () { return showControls.value;},
+      context: Get.context!,
     );
   }
 
@@ -919,11 +925,14 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       DiscordRPCController.instance.updateMediaPresence(media: anilistData);
     }
     _tvRemoteHandler?.dispose();
-    
+
     for (final subscription in _subscriptions) {
       subscription.cancel();
     }
     _loadTimeoutTimer?.cancel();
+    pauseFocusNode.dispose();
+    prevEpisodeFocusNode.dispose();
+    nextEpisodeFocusNode.dispose();
     player.dispose();
     _seekDebounce?.cancel();
     _brightnessTimer?.cancel();
@@ -1147,6 +1156,19 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       _cancelAutoHideTimer();
     } else {
       _resetAutoHideTimer();
+    }
+  }
+
+  void toggleShowControls() {
+    showControls.toggle();
+    if (showControls.value) {
+      Future.delayed(const Duration(milliseconds: 50), () {
+      pauseFocusNode.requestFocus();
+    });
+      _resetAutoHideTimer();
+    } else {
+      pauseFocusNode.unfocus();
+      _cancelAutoHideTimer();
     }
   }
 
