@@ -1,4 +1,4 @@
-name: Build & Release Android (AnymeX)
+name: Build & Release Android (NyanTV)
 
 on:
   push:
@@ -68,23 +68,15 @@ jobs:
         run: |
           flutter pub get
           dart run flutter_native_splash:create
-          flutter build apk --split-per-abi --release --no-tree-shake-icons
-          flutter build apk --release --no-tree-shake-icons
+          flutter build apk --target-platform android-arm --release --no-tree-shake-icons
 
           cd build/app/outputs/flutter-apk
-          mv app-armeabi-v7a-release.apk AnymeX-Android-armeabi-v7a.apk
-          mv app-arm64-v8a-release.apk AnymeX-Android-arm64-v8a.apk
-          mv app-x86_64-release.apk AnymeX-Android-x86_64.apk
-          mv app-release.apk AnymeX-Android-universal.apk
+          mv app-release.apk AnymeX-Android-armeabi-v7a.apk
 
       - name: Upload APKs to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            build/app/outputs/flutter-apk/AnymeX-Android-armeabi-v7a.apk
-            build/app/outputs/flutter-apk/AnymeX-Android-arm64-v8a.apk
-            build/app/outputs/flutter-apk/AnymeX-Android-x86_64.apk
-            build/app/outputs/flutter-apk/AnymeX-Android-universal.apk
+          files: build/app/outputs/flutter-apk/AnymeX-Android-armeabi-v7a.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
