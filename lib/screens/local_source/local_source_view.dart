@@ -1168,7 +1168,7 @@ class _WatchOfflineState extends State<WatchOffline> {
           controller.navigateToFolder(item.path);
         } else {
           if (settingsController.preferences
-              .get('useOldPlayer', defaultValue: false)) {
+              .get('useOldPlayer', defaultValue: true)) {
             navigate(() => OfflineWatchPageOld(
                   episodePath: LocalEpisode(
                       path: item.path,

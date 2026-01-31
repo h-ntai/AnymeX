@@ -79,10 +79,8 @@ class _WatchScreenState extends State<WatchScreen> {
           onKeyEvent: (event) {
             // Handle TV remote input
             if (controller.settings.isTV.value) {
-              final handled = controller.tvRemoteHandler.handleKeyEvent(event);
-              if (handled) {
-                return;
-              }
+              controller.tvRemoteHandler.handleKeyEvent(_keyboardFocusNode, event);
+              return;
             }
 
             if (event is KeyDownEvent) {

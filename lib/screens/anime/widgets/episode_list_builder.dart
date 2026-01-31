@@ -523,7 +523,7 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
                 Get.back();
                 if (General.shouldAskForTrack.get(true) == false) {
                   navigate(() => settingsController.preferences
-                          .get('useOldPlayer', defaultValue: false)
+                          .get('useOldPlayer', defaultValue: true)
                       ? WatchPage(
                           episodeSrc: e,
                           episodeList: widget.episodeList,
@@ -545,7 +545,7 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
 
                 if (shouldTrack != null) {
                   navigate(() => settingsController.preferences
-                          .get('useOldPlayer', defaultValue: false)
+                          .get('useOldPlayer', defaultValue: true)
                       ? WatchPage(
                           episodeSrc: e,
                           episodeList: widget.episodeList,

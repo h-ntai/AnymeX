@@ -234,6 +234,9 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
   void _initTVRemoteHandler() {
     _tvRemoteHandler = TVRemoteHandler(
+      player: player, 
+      context: Get.context!,
+      seekDuration: settings.seekDuration,
       onSeek: (position) {
         player.seek(position);
         currentPosition.value = position;
@@ -246,8 +249,15 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       },
       getCurrentPosition: () => currentPosition.value,
       getVideoDuration: () => episodeDuration.value,
-      isMenuVisible: () { return showControls.value;},
-      context: Get.context!,
+      isMenuVisible: () => showControls.value,
+      isLocked: () => false,
+      
+      onPlayPause: () => player.playOrPause(),
+      onSkipSegments: (isLeft) {
+        final skipSeconds = isLeft ? -settings.seekDuration : settings.seekDuration;
+        final newPos = Duration(seconds: currentPosition.value.inSeconds + skipSeconds);
+        player.seek(newPos);
+      },
     );
   }
 

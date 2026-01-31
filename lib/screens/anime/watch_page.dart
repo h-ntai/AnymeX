@@ -27,6 +27,7 @@ import 'package:anymex/widgets/common/glow.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_titlebar.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:anymex/widgets/helper/tv_wrapper.dart';
+import 'package:anymex/screens/anime/watch/controller/tv_remote_handler.dart';
 import 'package:anymex/widgets/custom_widgets/custom_button.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:anymex/widgets/custom_widgets/custom_textspan.dart';
@@ -130,6 +131,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
   final isEpisodeDialogOpen = false.obs;
   late bool isLoggedIn;
   final leftOriented = true.obs;
+  late TVRemoteHandler? _tvRemoteHandler;
 
   // Video Player Visual Profile
   final currentVisualProfile = 'natural'.obs;
@@ -197,6 +199,38 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
         _keyboardListenerFocusNode.requestFocus();
       }
     });
+    if (settings.isTV.value) {
+      _tvRemoteHandler = TVRemoteHandler(
+        player: player,
+        context: context,
+        seekDuration: settings.seekDuration,
+        onSeek: (duration) {
+          player.seek(duration);
+          currentPosition.value = duration;
+          formattedTime.value = formatDuration(duration);
+        },
+        onToggleMenu: () => toggleControls(),
+        onExitPlayer: () => Get.back(),
+        getCurrentPosition: () => currentPosition.value,
+        getVideoDuration: () => episodeDuration.value,
+        isMenuVisible: () => showControls.value,
+        isLocked: () => isLocked.value,
+        onPlayPause: () => player.playOrPause(),
+        onNextEpisode: () {
+          if (currentEpisode.value.number.toInt() < episodeList.value.last.number.toInt()) {
+            isSwitchingEpisode = true;
+            player.pause().then((_) => fetchEpisode(false));
+          }
+        },
+        onPreviousEpisode: () {
+          if (currentEpisode.value.number.toInt() > 1) {
+            isSwitchingEpisode = true;
+            player.pause().then((_) => fetchEpisode(true));
+          }
+        },
+        onSkipSegments: (isLeft) => _skipSegments(isLeft),
+      );
+    }
   }
 
   void _initOrientations() async {
@@ -751,6 +785,8 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
         AnymexTitleBar.setFullScreen(false);
       }
     }
+    _tvRemoteHandler?.dispose();
+    _tvRemoteHandler = null;
     _keyboardListenerFocusNode.dispose();
     super.dispose();
   }
@@ -770,13 +806,18 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
     }
   }
 
-  Future<void> handlePlayerKeyEvent(
-    KeyEvent e,
-  ) async {
-    if (e is! KeyDownEvent || settings.isTV.value) return;
+  Future<void> handlePlayerKeyEvent(FocusNode node, KeyEvent e) async {
+    if (settings.isTV.value && _tvRemoteHandler != null) {
+      _tvRemoteHandler!.handleKeyEvent(node, e);
+      return;
+    }
+
+    // Desktop/Mobile keyboard shortcuts
+    if (e is! KeyDownEvent) return;
 
     final key = e.logicalKey;
 
+    // Basic playback controls
     if (key == LogicalKeyboardKey.space) {
       player.playOrPause();
     } else if (key == LogicalKeyboardKey.arrowLeft) {
@@ -787,12 +828,13 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
       _megaSkip(false);
     } else if (key == LogicalKeyboardKey.comma || e.character == '<') {
       _megaSkip(true);
+    } else if (key == LogicalKeyboardKey.escape) {
+      Get.back();
     }
 
     if (settings.preferences.get('shaders_enabled', defaultValue: false)) {
       final keyLabel = key.keyLabel;
       final allowedKeys = ["1", "2", "3", "4", "5", "6", "0"];
-      Logger.i(keyLabel);
       if (allowedKeys.contains(keyLabel)) {
         setShaders(int.parse(keyLabel) - 1);
       }
@@ -801,10 +843,13 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
 
   @override
   Widget build(BuildContext context) {
-    return KeyboardListener(
+    return Focus(
       focusNode: _keyboardListenerFocusNode,
       autofocus: !settings.isTV.value,
-      onKeyEvent: handlePlayerKeyEvent,
+      onKeyEvent: (node, event) {
+        handlePlayerKeyEvent(node, event);
+        return KeyEventResult.handled;
+      },
       child: Scaffold(
         body: Stack(
           alignment: Alignment.center,
@@ -929,27 +974,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                   getResponsiveSize(context,
                       mobileSize: 0.4, desktopSize: 0.3, isStrict: true)
               : 0,
-          child: KeyboardListener(
-            focusNode: FocusNode(
-                skipTraversal: showControls.value,
-                canRequestFocus: !showControls.value,
-                descendantsAreFocusable: false,
-                descendantsAreTraversable: false),
-            autofocus: !showControls.value,
-            onKeyEvent: (e) {
-              if (settings.isTV.value) {
-                if (!showControls.value) {
-                  if (e.logicalKey == LogicalKeyboardKey.select ||
-                      e.logicalKey == LogicalKeyboardKey.arrowLeft ||
-                      e.logicalKey == LogicalKeyboardKey.arrowRight ||
-                      e.logicalKey == LogicalKeyboardKey.arrowUp ||
-                      e.logicalKey == LogicalKeyboardKey.arrowDown) {
-                    toggleControls(val: true);
-                  }
-                }
-              }
-            },
-            child: GestureDetector(
+          child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onLongPressStart: (e) {
                 pressed2x.value = true;
@@ -959,7 +984,20 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                 pressed2x.value = false;
                 player.setRate(prevRate.value);
               },
-              onTap: toggleControls,
+              onTap: () {
+                // TV mode: Only allow toggle when menu is hidden
+                // TVRemoteHandler will handle opening via Enter key
+                if (settings.isTV.value) {
+                  if (!showControls.value) {
+                    toggleControls(val: true);
+                  } else {
+                    // Tapping when open should close it
+                    toggleControls(val: false);
+                  }
+                } else {
+                  toggleControls();
+                }
+              },
               onDoubleTapDown: (e) => _handleDoubleTap(e),
               onVerticalDragUpdate: (e) async {
                 if (isMobile && settings.enableSwipeControls) {
@@ -992,8 +1030,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
                   color: Colors.black.withOpacity(0.5),
                 ),
               ),
-            ),
-          )),
+            )),
     );
   }
 

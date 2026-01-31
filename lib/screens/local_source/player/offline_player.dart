@@ -77,18 +77,19 @@ class _OfflineWatchPageState extends State<OfflineWatchPage> {
         _keyboardFocusNode.requestFocus();
       }
     });
-
-    return Scaffold(
-      body: KeyboardListener(
-        focusNode: _keyboardFocusNode,
-        autofocus: true,
-        onKeyEvent: (event) {
-          // Handle TV remote input
-          if (controller.settings.isTV.value) {
-            controller.tvRemoteHandler.handleKeyEvent(event);
-          }
-        },
-        child: Stack(
+    
+    return Focus(
+      focusNode: _keyboardFocusNode,
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        // Handle TV remote input
+        if (controller.settings.isTV.value) {
+          return controller.tvRemoteHandler.handleKeyEvent(node, event);
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
+        body: Stack(
           children: [
             Obx(() {
               return Video(

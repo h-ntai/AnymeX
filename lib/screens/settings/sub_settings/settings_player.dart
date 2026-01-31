@@ -229,7 +229,7 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
                                   description:
                                       "As many features are missing in the new player",
                                   switchValue: settings.preferences
-                                      .get('useOldPlayer', defaultValue: false),
+                                      .get('useOldPlayer', defaultValue: true),
                                   onChanged: (val) {
                                     settings.preferences
                                         .put('useOldPlayer', val);
