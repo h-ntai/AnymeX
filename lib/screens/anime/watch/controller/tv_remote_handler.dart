@@ -22,6 +22,7 @@ class TVRemoteHandler {
   final VoidCallback? onNextEpisode;
   final VoidCallback? onPreviousEpisode;
   final Function(bool)? onSkipSegments;
+  final VoidCallback? onMenuInteraction;
 
   TVRemoteHandler({
     required this.player,
@@ -38,6 +39,7 @@ class TVRemoteHandler {
     this.onNextEpisode,
     this.onPreviousEpisode,
     this.onSkipSegments,
+    this.onMenuInteraction,
   });
 
   // Seek configuration
@@ -93,6 +95,7 @@ class TVRemoteHandler {
           key == LogicalKeyboardKey.arrowUp ||
           key == LogicalKeyboardKey.arrowDown) {
         _handleFocusNavigation(key);
+        onMenuInteraction?.call();
         return true;
       }
 
@@ -109,6 +112,7 @@ class TVRemoteHandler {
       }
 
       // Consume all other keys when menu is visible
+      onMenuInteraction?.call();
       return true;
     }
 
@@ -140,15 +144,15 @@ class TVRemoteHandler {
       return true;
     }
 
-    // Arrow Up - Previous episode
+    // Arrow Up - Next episode
     if (key == LogicalKeyboardKey.arrowUp) {
-      onPreviousEpisode?.call();
+      onNextEpisode?.call();
       return true;
     }
 
-    // Arrow Down - Next episode
+    // Arrow Down - Previous episode
     if (key == LogicalKeyboardKey.arrowDown) {
-      onNextEpisode?.call();
+      onPreviousEpisode?.call();
       return true;
     }
 

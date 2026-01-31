@@ -229,6 +229,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
           }
         },
         onSkipSegments: (isLeft) => _skipSegments(isLeft),
+        onMenuInteraction: () => _startHideControlsTimer(),
       );
     }
   }
@@ -850,28 +851,42 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
         handlePlayerKeyEvent(node, event);
         return KeyEventResult.handled;
       },
-      child: Scaffold(
-        body: Stack(
-          alignment: Alignment.center,
-          children: [
-            _buildPlayer(context),
-            _buildOverlay(context),
-            _buildControls(),
-            _buildSubtitle(),
-            _buildRippleEffect(),
-            _build2xThingy(),
-            if (isMobile && settings.enableSwipeControls) ...[
-              _buildBrightnessSlider(),
-              _buildVolumeSlider(),
+      child: PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) {
+          if (didPop) return;
+          if (settings.isTV.value && showControls.value) {
+            // TV + Menü offen -> nur das Menü schließen
+            toggleControls(val: false);
+          } else {
+            // Menü geschlossen oder kein TV -> normal zurück zur detail_page
+            Get.back();
+          }
+        },
+        child: Scaffold(
+          body: Stack(
+            alignment: Alignment.center,
+            children: [
+              _buildPlayer(context),
+              _buildOverlay(context),
+              _buildControls(),
+              _buildSubtitle(),
+              _buildRippleEffect(),
+              _build2xThingy(),
+              if (isMobile && settings.enableSwipeControls) ...[
+                _buildBrightnessSlider(),
+                _buildVolumeSlider(),
+              ],
+              Obx(() => isBuffering.value && !showControls.value
+                  ? _buildBufferingIndicator()
+                  : const SizedBox.shrink()),
             ],
-            Obx(() => isBuffering.value && !showControls.value
-                ? _buildBufferingIndicator()
-                : const SizedBox.shrink()),
-          ],
+          ),
         ),
       ),
     );
   }
+
 
   Obx _build2xThingy() {
     return Obx(() {

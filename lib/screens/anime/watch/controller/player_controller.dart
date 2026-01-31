@@ -258,6 +258,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
         final newPos = Duration(seconds: currentPosition.value.inSeconds + skipSeconds);
         player.seek(newPos);
       },
+      onMenuInteraction: () => _resetAutoHideTimer(),
     );
   }
 
