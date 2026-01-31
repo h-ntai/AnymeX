@@ -807,14 +807,13 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
     }
   }
 
-  Future<void> handlePlayerKeyEvent(FocusNode node, KeyEvent e) async {
+  KeyEventResult handlePlayerKeyEvent(FocusNode node, KeyEvent e) {
     if (settings.isTV.value && _tvRemoteHandler != null) {
-      _tvRemoteHandler!.handleKeyEvent(node, e);
-      return;
+     return _tvRemoteHandler!.handleKeyEvent(node, e);
     }
 
     // Desktop/Mobile keyboard shortcuts
-    if (e is! KeyDownEvent) return;
+    if (e is! KeyDownEvent) return KeyEventResult.ignored;
 
     final key = e.logicalKey;
 
@@ -831,6 +830,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
       _megaSkip(true);
     } else if (key == LogicalKeyboardKey.escape) {
       Get.back();
+      return KeyEventResult.handled;
     }
 
     if (settings.preferences.get('shaders_enabled', defaultValue: false)) {
@@ -838,8 +838,11 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
       final allowedKeys = ["1", "2", "3", "4", "5", "6", "0"];
       if (allowedKeys.contains(keyLabel)) {
         setShaders(int.parse(keyLabel) - 1);
+        return KeyEventResult.handled;
       }
     }
+
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -848,8 +851,7 @@ class _WatchPageState extends State<WatchPage> with TickerProviderStateMixin, TV
       focusNode: _keyboardListenerFocusNode,
       autofocus: !settings.isTV.value,
       onKeyEvent: (node, event) {
-        handlePlayerKeyEvent(node, event);
-        return KeyEventResult.handled;
+        return handlePlayerKeyEvent(node, event);
       },
       child: PopScope(
         canPop: false,
